@@ -22,10 +22,12 @@ def parse_args():
     p.add_argument('--log', type=str, default=None, help='CSV log path e.g. logs/run.csv')
     p.add_argument('--alert-mode', type=str, default='on', choices=['on','off'], help='Disable alerts and alert text when off')
     # camera backend / orientation (Raspberry Pi support)
-    p.add_argument('--backend', type=str, default='auto', choices=['auto','opencv','picamera2'], help='Camera backend')
+    p.add_argument('--backend', type=str, default='auto', choices=['auto','opencv','picamera2','zmq'], help='Camera backend')
     p.add_argument('--rotate', type=int, default=0, choices=[0,90,180,270], help='Rotate frame (deg)')
     p.add_argument('--flip-h', action='store_true', help='Horizontal flip')
     p.add_argument('--flip-v', action='store_true', help='Vertical flip')
+    p.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ camera proxy URL (for backend=zmq)')
+    p.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ topic (for backend=zmq)')
     # experiment metadata
     p.add_argument('--session', type=str, default=None)
     p.add_argument('--participant', type=str, default=None)
@@ -44,7 +46,8 @@ def main():
     args = parse_args()
 
     cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
-                backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v).open()
+                backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v,
+                zmq_url=args.zmq_url, zmq_topic=args.zmq_topic).open()
     face = FaceProcessor(static_mode=False, refine_iris=True, max_faces=1)
 
     blink = BlinkDetector()

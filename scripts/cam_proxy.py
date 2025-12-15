@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+import argparse
+import time
+import sys
+import io
+import cv2
+import numpy as np
+import zmq
+
+# Picamera2 is expected to be available in system Python (3.13) via apt (python3-picamera2)
+try:
+    from picamera2 import Picamera2
+    from picamera2.encoders import JpegEncoder
+except Exception as e:
+    print("Failed to import Picamera2. Please install python3-picamera2.", file=sys.stderr)
+    raise
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--url', default='tcp://127.0.0.1:5555')
+    ap.add_argument('--topic', default='frame')
+    ap.add_argument('--width', type=int, default=640)
+    ap.add_argument('--height', type=int, default=480)
+    ap.add_argument('--fps', type=int, default=30)
+    ap.add_argument('--quality', type=int, default=85)
+    args = ap.parse_args()
+
+    ctx = zmq.Context.instance()
+    pub = ctx.socket(zmq.PUB)
+    pub.bind(args.url)
+    topic = args.topic.encode('utf-8')
+
+    picam = Picamera2()
+    config = picam.create_preview_configuration(main={"size": (args.width, args.height), "format": "RGB888"})
+    picam.configure(config)
+    picam.start()
+
+    t_prev = time.time()
+    try:
+        while True:
+            arr = picam.capture_array()
+            # Convert RGB to BGR for OpenCV encode (expects BGR)
+            frame = arr[:, :, ::-1]
+            # JPEG encode
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), args.quality]
+            ok, enc = cv2.imencode('.jpg', frame, encode_param)
+            if not ok:
+                continue
+            pub.send_multipart([topic, enc.tobytes()])
+            # throttle to approx fps
+            dt = time.time() - t_prev
+            t_prev = time.time()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        try:
+            picam.stop()
+        except Exception:
+            pass
+        pub.close(0)
+        ctx.term()
+
+
+if __name__ == '__main__':
+    main()
