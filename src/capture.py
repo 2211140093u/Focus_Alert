@@ -46,7 +46,16 @@ class _OpenCVCamera:
 
 class _PiCamera2Camera:
     def __init__(self, width=640, height=480, fps=30, rotate=0, flip_h=False, flip_v=False):
-        from picamera2 import Picamera2
+        # Import Picamera2, appending system dist-packages at the END only if needed,
+        # so that venv's numpy/opencv remain preferred.
+        try:
+            from picamera2 import Picamera2  # type: ignore
+        except Exception:
+            import sys
+            p = '/usr/lib/python3/dist-packages'
+            if p not in sys.path:
+                sys.path.append(p)
+            from picamera2 import Picamera2  # type: ignore
         self.Picamera2 = Picamera2
         self.width = width
         self.height = height
