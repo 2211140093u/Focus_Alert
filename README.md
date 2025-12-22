@@ -61,8 +61,8 @@ python src/app.py --alert-mode off --log logs/work.csv
 
 ## Personalization（本バージョンでは未使用）
 
-- 今回のバージョンでは、個人に合わせた学習やモデルの保存/読込は行いません。
-- セッション内の短期安定化（EARのEWMA、視線の中心キャリブ）だけを使用します。
+- 今回のバージョンでは、個人に合わせた学習やモデルの保存/読込はおこなわない
+- セッション内の短期安定化（EARのEWMA、視線の中心キャリブレーション）だけを使用する
 
 ## Logging（CSV）
 
@@ -70,7 +70,7 @@ python src/app.py --alert-mode off --log logs/work.csv
 - 代表カラム: `ts,row_type,session,participant,task,phase,block_id,ear,ear_base,ear_thr,blink_count,is_closed,long_close,gaze,gaze_thr,gaze_bias,gaze_offlvl,risk,alert,event,info`
 - `event`: `block_start/end`, `marker`, `distractor_start/end`, `calibrate_center` など
 
-## Analysis Notebook
+## Analysis Notebook（本バージョンでは未使用）
 
 - `notebooks/analysis.ipynb`
   - ログ読み込みと整形
@@ -78,6 +78,14 @@ python src/app.py --alert-mode off --log logs/work.csv
   - 混同行列・Precision/Recall/F1・ROC-AUC
   - 検出遅延（distractor_start → 最初のアラートまで）
 - 使い方: 先頭セルの `LOG_PATHS` にCSVを指定し、全セル実行
+
+## Reports
+
+- 計測したcsvデータをグラフ化しhtmlファイルを作成する
+- 使用方法
+```
+python scripts/report.py --log logs/pc_test.csv --out reports/report.html
+```
 
 ## Tips
 
