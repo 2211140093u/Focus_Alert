@@ -54,8 +54,8 @@ class BlinkDetector:
             if not self.closed:
                 self.open_baseline = (1 - self.base_alpha) * self.open_baseline + self.base_alpha * candidate
 
-        # 相対しきい値: 基準値の約80%未満で「閉眼」とみなす
-        thresh = self.open_baseline * 0.80
+        # 相対しきい値: 基準値の約90%未満で「閉眼」とみなす
+        thresh = self.open_baseline * 0.90
 
         if ear < thresh:
             self.close_frames += 1
@@ -64,7 +64,7 @@ class BlinkDetector:
         else:
             now_closed = False
             # 閉→開の遷移時に、一定範囲の継続フレーム数なら「瞬目」とカウント
-            if self.closed and 2 <= self.close_frames <= 20:
+            if self.closed and 1 <= self.close_frames <= 20:
                 self.blinks += 1
             self.close_frames = 0
             self.long_close_frames = 0
