@@ -14,6 +14,6 @@ class FaceProcessor:
         res = self.face_mesh.process(rgb_image)
         if not res.multi_face_landmarks:
             return {'landmarks': None, 'has_face': False}
-        # Use first face only
+        # 最初の1人分のランドマークのみを使用
         lms = res.multi_face_landmarks[0].landmark
         return {'landmarks': lms, 'has_face': True}

@@ -7,7 +7,7 @@ class Overlay:
     def draw(self, frame, feats, score, alert, fps, status=None, show_alert_text=True):
         vis = frame.copy()
         h, w = vis.shape[:2]
-        # panel
+        # 情報パネル描画
         cv2.rectangle(vis, (10, 10), (400, 170), (0,0,0), -1)
         cv2.rectangle(vis, (10, 10), (400, 170), (255,255,255), 1)
         y = 35
@@ -25,7 +25,7 @@ class Overlay:
         put(f"GazeX: {g['gaze_horiz']:.2f} thr={g.get('gaze_thresh',0):.2f} bias={g.get('gaze_bias',0):.2f}")
         put(f"GazeY: {g.get('gaze_y',0.0):.2f} thr={g.get('gaze_y_thresh',0.0):.2f} bias={g.get('gaze_bias_y',0.0):.2f} offlvl={g.get('gaze_off_level',0):.2f}")
 
-        # score bar
+        # リスクスコアのバー表示
         bar_w = int(250 * max(0.0, min(1.0, score)))
         cv2.rectangle(vis, (20, 140), (270, 150), (80,80,80), 1)
         cv2.rectangle(vis, (20, 140), (20+bar_w, 150), (0,0,255) if alert else (0,255,0), -1)
@@ -36,8 +36,8 @@ class Overlay:
         return vis
 
     def draw_buttons(self, frame, states=None):
-        # Simple touch UI: Start, End, Marker, Distract, Calib, Quit
-        # Returns dict: name -> (x1,y1,x2,y2)
+        # 簡易タッチUIボタン: Start, End, Marker, Distract, Calib, Quit
+        # 返り値は辞書: 名前 -> (x1,y1,x2,y2)
         vis = frame
         h, w = vis.shape[:2]
         labels = [

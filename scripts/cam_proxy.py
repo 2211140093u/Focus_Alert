@@ -7,12 +7,13 @@ import cv2
 import numpy as np
 import zmq
 
-# Picamera2 is expected to be available in system Python (3.13) via apt (python3-picamera2)
+# Picamera2 はシステムの Python（3.13）に apt（python3-picamera2）でインストールされている想定
 try:
     from picamera2 import Picamera2
     from picamera2.encoders import JpegEncoder
 except Exception as e:
-    print("Failed to import Picamera2. Please install python3-picamera2.", file=sys.stderr)
+# Picamera2 を読み込めない場合は、python3-picamera2 を導入する
+    print("Picamera2 の読み込みに失敗しました。python3-picamera2 をインストールしてください。", file=sys.stderr)
     raise
 
 
@@ -32,6 +33,7 @@ def main():
     topic = args.topic.encode('utf-8')
 
     picam = Picamera2()
+    # プレビュー用の設定を作成（サイズと色形式を指定）
     config = picam.create_preview_configuration(main={"size": (args.width, args.height), "format": "RGB888"})
     picam.configure(config)
     picam.start()
@@ -40,15 +42,15 @@ def main():
     try:
         while True:
             arr = picam.capture_array()
-            # Convert RGB to BGR for OpenCV encode (expects BGR)
+            # OpenCV のエンコードは BGR 前提のため、RGB から BGR に並び替える
             frame = arr[:, :, ::-1]
-            # JPEG encode
+            # JPEG にエンコード（品質は --quality で指定）
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), args.quality]
             ok, enc = cv2.imencode('.jpg', frame, encode_param)
             if not ok:
                 continue
             pub.send_multipart([topic, enc.tobytes()])
-            # throttle to approx fps
+            # おおよそ指定 FPS になるように処理時間を計測（ここでは記録のみ）
             dt = time.time() - t_prev
             t_prev = time.time()
     except KeyboardInterrupt:

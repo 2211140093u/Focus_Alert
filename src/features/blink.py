@@ -1,7 +1,7 @@
 import numpy as np
 
-# Eye landmark indices for FaceMesh (mediapipe)
-# Left eye and right eye key points for EAR calculation
+# FaceMesh（MediaPipe）の目のランドマーク番号
+# EAR（まばたき指標）計算に使う左右の主要点
 LEFT = [33, 160, 158, 133, 153, 144]
 RIGHT = [263, 387, 385, 362, 380, 373]
 
@@ -13,18 +13,18 @@ class BlinkDetector:
         self.close_frames = 0
         self.blinks = 0
         self.long_close_frames = 0
-        self.long_close_threshold_frames = 12  # ~400ms at 30fps
-        # EWMA baseline of "open eye" EAR
+        self.long_close_threshold_frames = 12  # 30fps時におよそ400ms
+        # 開眼時 EAR の基準値（EWMAでゆっくり更新）
         self.open_baseline = 0.45
         self.base_alpha = 0.05
-        # allow disabling baseline adaptation within a session (eval phase)
+        # セッション中の基準値の適応を無効化できるフラグ（評価フェーズなど）
         self.adapt_enabled = True
 
     @staticmethod
     def _ear(pts):
-        # pts: [p1,p2,p3,p4,p5,p6] = [outer, upper1, lower1, inner, lower2, upper2]
+        # pts: [p1,p2,p3,p4,p5,p6] = [外側, 上まぶた1, 下まぶた1, 内側, 下まぶた2, 上まぶた2]
         p1,p2,p3,p4,p5,p6 = pts
-        # We'll compute distances directly using numpy
+        # numpy を用いて距離を計算
         def d(a,b):
             return np.hypot(a.x - b.x, a.y - b.y)
         vert = d(p2,p5) + d(p3,p6)
@@ -41,20 +41,20 @@ class BlinkDetector:
         le = self._eye_ear(landmarks, LEFT)
         re = self._eye_ear(landmarks, RIGHT)
         ear = (le + re) * 0.5
-        # smooth
+        # 平滑化（指数移動平均）
         if self.ear_smooth == 0.0:
             self.ear_smooth = ear
         else:
             self.ear_smooth = self.alpha * ear + (1 - self.alpha) * self.ear_smooth
 
-        # Update open-eye baseline when not closed (conservative)
-        # Use the max of smoothed and current to avoid drifting too low during blinks
+        # 閉眼していない時に開眼基準値を更新（保守的）
+        # 瞬目中に基準値が下がりすぎないよう、現在値と平滑値の大きい方を採用
         if self.adapt_enabled:
             candidate = max(ear, self.ear_smooth)
             if not self.closed:
                 self.open_baseline = (1 - self.base_alpha) * self.open_baseline + self.base_alpha * candidate
 
-        # Relative threshold: closed if below ~80% of baseline
+        # 相対しきい値: 基準値の約80%未満で「閉眼」とみなす
         thresh = self.open_baseline * 0.80
 
         if ear < thresh:
@@ -63,7 +63,7 @@ class BlinkDetector:
             now_closed = True
         else:
             now_closed = False
-            # blink counted on closed->open transition
+            # 閉→開の遷移時に、一定範囲の継続フレーム数なら「瞬目」とカウント
             if self.closed and 2 <= self.close_frames <= 20:
                 self.blinks += 1
             self.close_frames = 0
@@ -82,7 +82,7 @@ class BlinkDetector:
         }
 
     def miss(self):
-        # No face: decay towards baseline, don't count
+        # 顔を見失った時: 平滑値を基準値へ緩やかに戻し、カウントはしない
         self.ear_smooth = self.alpha * self.open_baseline + (1 - self.alpha) * self.ear_smooth
         self.close_frames = 0
         self.long_close_frames = 0

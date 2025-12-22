@@ -10,14 +10,14 @@ class CSVLogger:
     def _init(self):
         with open(self.path, 'w', newline='', encoding='utf-8') as f:
             w = csv.writer(f)
-            # Common header
+            # 共通ヘッダ
             w.writerow([
                 'ts','row_type','session','participant','task','phase','block_id',
                 'ear','ear_base','ear_thr','blink_count','is_closed','long_close',
                 'gaze','gaze_thr','gaze_bias','gaze_y','gaze_y_thr','gaze_bias_y','gaze_offlvl',
                 'risk','alert','event','info'
             ])
-            # Optionally write a meta row
+            # 必要に応じてメタ行を書き込む
             w.writerow([
                 time.time(),'meta',
                 self.meta.get('session'), self.meta.get('participant'), self.meta.get('task'), self.meta.get('phase'), None,

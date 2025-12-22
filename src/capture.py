@@ -13,7 +13,7 @@ class _OpenCVCamera:
         self.cap = None
 
     def open(self):
-        # CAP_DSHOW for Windows; on Linux V4L2 default works. Try generic first.
+        # Windows では CAP_DSHOW を使うことがありますが、まずは汎用的な方法を試します（Linux では V4L2 が既定）。
         self.cap = cv2.VideoCapture(self.index)
         if not self.cap.isOpened():
             self.cap = cv2.VideoCapture(self.index, cv2.CAP_DSHOW)
@@ -26,7 +26,7 @@ class _OpenCVCamera:
         ok, frame = self.cap.read()
         if not ok:
             return ok, frame
-        # apply orientation
+        # 画像の向きを調整（回転・反転）
         if self.rotate in (90, 180, 270):
             if self.rotate == 90:
                 frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
@@ -47,8 +47,8 @@ class _OpenCVCamera:
 
 class _PiCamera2Camera:
     def __init__(self, width=640, height=480, fps=30, rotate=0, flip_h=False, flip_v=False):
-        # Import Picamera2, appending system dist-packages at the END only if needed,
-        # so that venv's numpy/opencv remain preferred.
+        # Picamera2 を読み込む。失敗した場合のみシステムの dist-packages を末尾に追加し、
+        # venv（仮想環境）側の numpy/opencv を優先したままにします。
         try:
             from picamera2 import Picamera2  # type: ignore
         except Exception:
@@ -70,9 +70,9 @@ class _PiCamera2Camera:
         self.cam = self.Picamera2()
         config = self.cam.create_preview_configuration(main={"size": (self.width, self.height), "format": "RGB888"})
         self.cam.configure(config)
-        # orientation
+        # 向き（回転・反転）の指定
         transform = 0
-        # Picamera2 uses Transform flags; approximate via request controls if available
+        # Picamera2 は Transform フラグを使います。利用可能ならそれを使って近い挙動を指定します。
         try:
             from picamera2 import Transform
             transform = 0
@@ -81,7 +81,7 @@ class _PiCamera2Camera:
             if self.flip_v:
                 transform |= Transform.VFLIP
             if self.rotate in (90, 180, 270):
-                # Rotation handled via transform as multiples of 90
+                # 回転は 90 度単位で Transform で指定
                 if self.rotate == 90:
                     transform |= Transform.ROT90
                 elif self.rotate == 180:
@@ -95,7 +95,7 @@ class _PiCamera2Camera:
         return self
 
     def read(self):
-        # returns RGB888; convert to BGR for OpenCV
+        # 取得画像は RGB888 なので、OpenCV で扱いやすいよう BGR に変換します。
         import numpy as np
         arr = self.cam.capture_array()
         frame = arr[:, :, ::-1].copy()
@@ -111,7 +111,7 @@ class _PiCamera2Camera:
 
 class _ZmqCamera:
     def __init__(self, url='tcp://127.0.0.1:5555', topic='frame'):
-        import zmq  # lazy import
+        import zmq  # 遅延インポート（必要になってから読み込む）
         self.zmq = zmq
         self.url = url
         self.topic = topic.encode('utf-8')
@@ -123,14 +123,14 @@ class _ZmqCamera:
         self.sub = self.ctx.socket(self.zmq.SUB)
         self.sub.connect(self.url)
         self.sub.setsockopt(self.zmq.SUBSCRIBE, self.topic)
-        # non-blocking ready poller
+        # ノンブロッキングで受信可否を監視するポーラ
         self.poller = self.zmq.Poller()
         self.poller.register(self.sub, self.zmq.POLLIN)
         return self
 
     def read(self):
-        # receive [topic, jpg_bytes]
-        socks = dict(self.poller.poll(1000))  # 1s timeout
+        # 受信形式は [topic, jpg_bytes]
+        socks = dict(self.poller.poll(1000))  # タイムアウト 1 秒
         if self.sub not in socks:
             return False, None
         parts = self.sub.recv_multipart()
@@ -180,7 +180,7 @@ class Camera:
             except Exception:
                 if self.backend == 'picamera2':
                     raise
-        # fallback to OpenCV
+        # 最後の手段として OpenCV カメラにフォールバック
         self.impl = _OpenCVCamera(index=self.index, width=self.width, height=self.height, fps=self.fps,
                                    rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
         return self

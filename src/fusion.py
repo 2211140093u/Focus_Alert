@@ -4,11 +4,11 @@ class FusionScorer:
     def __init__(self):
         self.score = 0.0
         self.alpha = 0.3
-        self.hi = 0.55  # alert threshold
-        self.lo = 0.35  # not used yet; reserved for de-latch
+        self.hi = 0.55  # アラートのしきい値
+        self.lo = 0.35  # 今は未使用（将来の解除ヒステリシス用）
 
     def update(self, feats, perso):
-        # Heuristic: emphasize long eye-closure and persistent off-gaze
+        # ヒューリスティック: 長時間の閉眼と継続的な視線逸脱を強めに評価
         blink = feats['blink']
         gaze = feats['gaze']
         long_close = 1.0 if blink.get('long_close', False) else 0.0
@@ -20,7 +20,7 @@ class FusionScorer:
         return self.score
 
     def should_alert(self, score, now_ts, last_alert_ts, cooldown_sec=60.0):
-        # Hysteresis with cooldown
+        # クールダウン付きのヒステリシス
         in_cooldown = (now_ts - last_alert_ts) < cooldown_sec
         if score >= self.hi and not in_cooldown:
             return True

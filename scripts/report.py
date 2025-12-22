@@ -35,7 +35,7 @@ def load_log(path: str):
     df.sort_values("ts", inplace=True)
     frames = df[df["row_type"] == "frame"].copy()
     events = df[df["row_type"] == "event"].copy()
-    # coerce types
+    # 型を数値/整数にそろえる
     for c in ["risk","ear","ear_base","ear_thr","gaze","gaze_thr","gaze_bias","gaze_offlvl"]:
         if c in frames:
             frames[c] = pd.to_numeric(frames[c], errors="coerce")
@@ -44,7 +44,7 @@ def load_log(path: str):
             frames[c] = frames[c].fillna(0).astype(int)
     if "block_id" in frames:
         frames["block_id"] = frames["block_id"].fillna(-1).astype(int)
-    # derive distractor_active timeline
+    # 注意分散（distractor）区間のタイムラインを復元
     frames["distractor_active"] = False
     ev = events.sort_values("ts")
     active = False
@@ -66,7 +66,7 @@ def load_log(path: str):
 def figure_timeseries(frames: pd.DataFrame, title: str):
     fig, axes = plt.subplots(3, 1, figsize=(14, 9), sharex=True)
     t = frames["ts"].values
-    # Risk
+    # リスク
     axes[0].plot(t, frames["risk"], label="Risk", color="#1f77b4")
     if "alert" in frames:
         a = frames[frames["alert"] > 0]
@@ -83,7 +83,7 @@ def figure_timeseries(frames: pd.DataFrame, title: str):
         axes[1].plot(t, frames["ear_thr"], label="EAR thr", color="#d62728", alpha=0.6, linestyle="--")
     axes[1].set_ylabel("EAR")
     axes[1].legend(loc="upper right")
-    # Gaze
+    # 視線（Gaze）
     if "gaze" in frames:
         axes[2].plot(t, frames["gaze"], label="Gaze", color="#9467bd")
     if "gaze_thr" in frames:
@@ -96,10 +96,9 @@ def figure_timeseries(frames: pd.DataFrame, title: str):
     axes[2].set_ylabel("Gaze")
     axes[2].set_xlabel("Timestamp (s)")
     axes[2].legend(loc="upper right")
-    # shade distractor
+    # 注意分散区間を縦線でマーキング（軽量化のためおよそ1fpsで処理）
     if "distractor_active" in frames:
         y0, y1 = axes[0].get_ylim()
-        # mark as vertical spans at 1 fps sampling to avoid heavy patches
         dmask = frames["distractor_active"].values
         for i in range(1, len(dmask)):
             if dmask[i] and not dmask[i-1]:
@@ -117,7 +116,7 @@ def figure_gaze_scatter(frames: pd.DataFrame, title: str):
     gx = frames.get('gaze', pd.Series(dtype=float))
     gy = frames.get('gaze_y', pd.Series(dtype=float))
     ax.scatter(gx, gy, s=4, alpha=0.3)
-    # thresholds
+    # 閾値の補助線
     if 'gaze_thr' in frames:
         thr = np.nanmedian(frames['gaze_thr'])
         ax.axvline(thr, color='gray', ls='--', lw=1)
@@ -175,9 +174,9 @@ def summarize(frames: pd.DataFrame):
     if "blink_count" in frames:
         s["blink_count_max"] = int(frames["blink_count"].max())
     s["long_close_count"] = int(frames.get("long_close", pd.Series([0])).sum()) if "long_close" in frames else 0
-    # gaze off dwell approximation
+    # 視線逸脱レベルの平均（オフ滞留の近似）
     s["off_level_mean"] = float(np.nanmean(frames.get("gaze_offlvl", pd.Series(dtype=float)))) if "gaze_offlvl" in frames else np.nan
-    # distractor coverage
+    # 注意分散の割合
     if "distractor_active" in frames:
         s["distractor_ratio"] = float(frames["distractor_active"].mean())
     else:
@@ -214,15 +213,15 @@ def html_report(sections, title="Focus Alert Session Report"):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--log", required=True, nargs="+", help="CSV log path(s)")
-    ap.add_argument("--out", required=True, help="Output HTML path")
+    ap.add_argument("--log", required=True, nargs="+", help="CSV ログのパス（複数可）")
+    ap.add_argument("--out", required=True, help="出力HTMLのパス")
     ap.add_argument("--title", default="Focus Alert Session Report")
     args = ap.parse_args()
 
     sections = []
     for lp in args.log:
         frames, events = load_log(lp)
-        # meta row is in CSV as meta record
+        # CSV内のメタ行（row_type=meta）を取得
         meta_row = None
         try:
             dfm = pd.read_csv(lp)
@@ -231,18 +230,18 @@ def main():
         except Exception:
             meta_row = {}
         sess_title = f"{Path(lp).name}"
-        # figures
+        # 図表の生成
         ts_fig = figure_timeseries(frames, title=sess_title)
         ts_b64 = b64_png(ts_fig)
         hist_fig = figure_histograms(frames, title=sess_title)
         hist_b64 = b64_png(hist_fig)
-        # gaze 2D
+        # 視線の2次元表示
         imgs = [ts_b64, hist_b64]
         if 'gaze_y' in frames.columns:
             scat = b64_png(figure_gaze_scatter(frames, title=sess_title))
             heat = b64_png(figure_gaze_heatmap(frames, title=sess_title))
             imgs.extend([scat, heat])
-        # summary
+        # サマリ統計
         summ = summarize(frames)
         sections.append({
             "title": sess_title,

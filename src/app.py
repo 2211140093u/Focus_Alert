@@ -19,26 +19,26 @@ def parse_args():
     p.add_argument('--width', type=int, default=640)
     p.add_argument('--height', type=int, default=480)
     p.add_argument('--display', action='store_true', default=True)
-    p.add_argument('--log', type=str, default=None, help='CSV log path e.g. logs/run.csv')
-    p.add_argument('--alert-mode', type=str, default='on', choices=['on','off'], help='Disable alerts and alert text when off')
-    # camera backend / orientation (Raspberry Pi support)
-    p.add_argument('--backend', type=str, default='auto', choices=['auto','opencv','picamera2','zmq'], help='Camera backend')
-    p.add_argument('--rotate', type=int, default=0, choices=[0,90,180,270], help='Rotate frame (deg)')
-    p.add_argument('--flip-h', action='store_true', help='Horizontal flip')
-    p.add_argument('--flip-v', action='store_true', help='Vertical flip')
-    p.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ camera proxy URL (for backend=zmq)')
-    p.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ topic (for backend=zmq)')
-    # experiment metadata
+    p.add_argument('--log', type=str, default=None, help='CSVの保存先（例: logs/run.csv）')
+    p.add_argument('--alert-mode', type=str, default='on', choices=['on','off'], help='off にするとアラート表示を無効化')
+    # カメラのバックエンド/向き（Raspberry Pi を想定）
+    p.add_argument('--backend', type=str, default='auto', choices=['auto','opencv','picamera2','zmq'], help='使用するカメラバックエンド')
+    p.add_argument('--rotate', type=int, default=0, choices=[0,90,180,270], help='フレームの回転角（度）')
+    p.add_argument('--flip-h', action='store_true', help='左右反転')
+    p.add_argument('--flip-v', action='store_true', help='上下反転')
+    p.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ カメラプロキシのURL（backend=zmq 用）')
+    p.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ のトピック名（backend=zmq 用）')
+    # 実験のメタ情報
     p.add_argument('--session', type=str, default=None)
     p.add_argument('--participant', type=str, default=None)
     p.add_argument('--task', type=str, default=None)
     p.add_argument('--phase', type=str, default='train', choices=['train','eval'])
     p.add_argument('--calib-seconds', type=int, default=60)
-    # personalization persistence
+    # パーソナライズの保存/読み込み（学習OFFの場合は未使用）
     p.add_argument('--model-save', type=str, default=None)
     p.add_argument('--model-load', type=str, default=None)
-    # learning control
-    p.add_argument('--learning', type=str, default='off', choices=['on','off'], help='Turn personalization learning on/off (default off)')
+    # 学習のON/OFF（デフォルトOFF）
+    p.add_argument('--learning', type=str, default='off', choices=['on','off'], help='パーソナライズ学習の有効/無効')
     return p.parse_args()
 
 
@@ -54,12 +54,12 @@ def main():
     gaze = GazeEstimator()
     fusion = FusionScorer()
     perso = Personalizer(phase=args.phase, calib_seconds=args.calib_seconds)
-    # Disable detector's baseline adaptation in eval sessions (reflect only next session upon load)
+    # 評価フェーズではベースラインの適応を無効化（次回以降の学習のみ反映）
     try:
         blink.adapt_enabled = (args.phase == 'train') and (args.learning == 'on')
     except Exception:
         pass
-    # load personalization if provided
+    # 学習ONかつモデル指定がある場合は読み込み
     learning_enabled = (args.learning == 'on')
     if learning_enabled and args.model_load:
         try:
@@ -88,7 +88,7 @@ def main():
     block_id = None
     distractor_on = False
 
-    # mouse/touch handling
+    # マウス/タッチ入力の取得
     last_click = {'x': None, 'y': None, 'ts': 0}
     win_name = 'Focus Alert (Blink+Gaze)'
     def on_mouse(event, x, y, flags, param):
@@ -120,14 +120,14 @@ def main():
             feats['blink'] = blink.miss()
             feats['gaze'] = gaze.miss()
 
-        # Compute score and alert first
+        # まずスコアを更新し、アラート判定
         score = fusion.update(feats, perso)
         now = time.time()
         alert = fusion.should_alert(score, now, last_alert_time, cooldown_sec) if alert_enabled else False
         if alert:
             last_alert_time = now
 
-        # Then update personalization only when learning is enabled
+        # 次に、学習ONの場合のみパーソナライズを更新
         if learning_enabled:
             perso.update(feats, status=status, alert=alert)
 
@@ -141,7 +141,7 @@ def main():
         cv2.imshow(win_name, vis)
         cv2.setMouseCallback(win_name, on_mouse)
         key = cv2.waitKey(1) & 0xFF
-        # touch -> emulate key via rect hit test
+        # タッチ入力 → ボタン矩形のヒットテストでキーを擬似的に発火
         if last_click['x'] is not None:
             x, y = last_click['x'], last_click['y']
             last_click['x'] = None
@@ -163,12 +163,12 @@ def main():
         if key == ord('q'):
             break
         if key == ord('c'):
-            # Calibrate gaze center
+            # 視線の中心をキャリブレーション
             gaze.calibrate_center()
             if logger:
                 logger.write_event('calibrate_center', block_id=block_id)
         if key == ord('s'):
-            # start new block
+            # 新しいブロックを開始
             block_id = 1 if block_id is None else (block_id + 1)
             if logger:
                 logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
@@ -185,7 +185,7 @@ def main():
 
     cam.release()
     cv2.destroyAllWindows()
-    # save personalization on exit if requested and learning is enabled
+    # 終了時、学習ONかつ保存先指定があればパーソナライズを保存
     if learning_enabled and args.model_save:
         try:
             perso.save(args.model_save)
