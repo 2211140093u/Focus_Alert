@@ -42,11 +42,14 @@ def main():
     try:
         while True:
             arr = picam.capture_array()
-            # OpenCV のエンコードは BGR 前提のため、RGB から BGR に並び替える
-            frame = arr[:, :, ::-1]
+            # Picamera2はRGB888形式で取得される
+            # OpenCVのimencodeはBGR形式を想定しているため、RGB→BGRに変換
+            # ただし、JPEGエンコード時は色空間情報が保持されるため、そのままRGBでエンコードしても問題ない
+            # しかし、受信側でcv2.imdecodeするとBGRとして解釈されるため、ここでBGRに変換
+            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
             # JPEG にエンコード（品質は --quality で指定）
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), args.quality]
-            ok, enc = cv2.imencode('.jpg', frame, encode_param)
+            ok, enc = cv2.imencode('.jpg', frame_bgr, encode_param)
             if not ok:
                 continue
             pub.send_multipart([topic, enc.tobytes()])

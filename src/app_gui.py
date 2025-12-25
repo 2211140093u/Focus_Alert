@@ -57,20 +57,9 @@ def run_measurement(args, settings=None):
     
     overlay = Overlay()
     
-    # ログファイルの自動命名
-    log_path = args.log if args.log else ('logs' if args.auto_log_name else None)
-    logger = CSVLogger(log_path, meta={
-        'session': args.session,
-        'participant': args.participant,
-        'task': args.task,
-        'phase': args.phase,
-        'ear_threshold_ratio': args.ear_threshold_ratio,
-        'ear_baseline_init': args.ear_baseline_init,
-        'risk_threshold': fusion.hi,
-    }, auto_name=args.auto_log_name) if log_path else None
-    
-    if logger:
-        print(f"Logging to: {logger.path}")
+    # ログファイルは「記録開始」ボタンが押されたときに作成される
+    # ここではloggerをNoneに設定（後で作成される）
+    logger = None
     
     last_alert_time = 0.0
     cooldown_sec = settings.get('cooldown_sec', 60.0) if settings else 60.0
@@ -231,6 +220,20 @@ def run_measurement(args, settings=None):
             if logger:
                 logger.write_event('calibrate_center', block_id=block_id)
         if key == ord('s'):
+            # 「記録開始」ボタンが押されたとき、loggerがまだ作成されていない場合は作成
+            if logger is None:
+                log_path = args.log if hasattr(args, 'log') and args.log else ('logs' if args.auto_log_name else None)
+                if log_path:
+                    logger = CSVLogger(log_path, meta={
+                        'session': args.session if hasattr(args, 'session') else None,
+                        'participant': args.participant if hasattr(args, 'participant') else None,
+                        'task': args.task if hasattr(args, 'task') else None,
+                        'phase': args.phase if hasattr(args, 'phase') else 'eval',
+                        'ear_threshold_ratio': args.ear_threshold_ratio if hasattr(args, 'ear_threshold_ratio') else 0.90,
+                        'ear_baseline_init': args.ear_baseline_init if hasattr(args, 'ear_baseline_init') else 0.45,
+                        'risk_threshold': fusion.hi,
+                    }, auto_name=args.auto_log_name if hasattr(args, 'auto_log_name') else True)
+                    print(f"Logging started: {logger.path}")
             block_id = 1 if block_id is None else (block_id + 1)
             if logger:
                 logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
@@ -341,7 +344,7 @@ def main_gui():
                 model_load=None,
                 learning='off',
                 alert_mode='on',
-                log=None,
+                log='logs',  # ログディレクトリを指定（記録開始時に自動命名）
                 auto_log_name=True,
                 ear_threshold_ratio=options_menu.settings.get('ear_threshold_ratio', 0.90),
                 ear_baseline_init=options_menu.settings.get('ear_baseline_init', 0.45),
