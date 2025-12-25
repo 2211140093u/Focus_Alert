@@ -21,6 +21,9 @@ class _OpenCVCamera:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_FPS, self.fps)
         
+        # RGB変換を明示的に有効化（モノクロ問題の対策）
+        self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
+        
         # カメラ品質の最適化設定
         # 自動露出を有効化（明るさの自動調整）
         self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)  # 0.75 = 自動露出モード

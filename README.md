@@ -146,7 +146,10 @@ python scripts/report.py --log logs/pc_test.csv --out reports/report.html
 - [PCセットアップガイド](docs/PC_SETUP.md) - PCでの詳細な動作確認手順
 - [Raspberry Piセットアップガイド](docs/RASPBERRY_PI_SETUP.md) - Raspberry Piでのワンタッチ起動設定
 - [レポート作成ガイド](docs/REPORT_GUIDE.md) - レポートの作成方法と記録項目の説明
+- [EARパラメータの詳細説明](docs/EAR_PARAMETERS.md) - EAR閾値と基準値の調整方法
+- [リスクスコアの判定方法](docs/RISK_SCORE.md) - リスクスコアの計算と判定ロジック
 - [よくある質問（FAQ）](docs/FAQ.md) - よくある質問と回答
+- [質問への回答まとめ](docs/ANSWERS.md) - 詳細な質問への回答
 - [セットアップ手順まとめ](docs/SUMMARY.md) - 全手順の概要
 - [アイコン設定ガイド](docs/INSTALL_ICON.md) - デスクトップアイコンの設定方法
 

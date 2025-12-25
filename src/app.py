@@ -21,7 +21,8 @@ def parse_args():
     p.add_argument('--display-width', type=int, default=None, help='表示ウィンドウの幅（未指定時はカメラ解像度または320×480）')
     p.add_argument('--display-height', type=int, default=None, help='表示ウィンドウの高さ（未指定時はカメラ解像度または320×480）')
     p.add_argument('--display', action='store_true', default=True)
-    p.add_argument('--log', type=str, default=None, help='CSVの保存先（例: logs/run.csv）')
+    p.add_argument('--log', type=str, default=None, help='CSVの保存先（例: logs/run.csv、ディレクトリのみ指定で自動命名）')
+    p.add_argument('--auto-log-name', action='store_true', default=True, help='ログファイル名を自動生成（日時ベース）')
     p.add_argument('--alert-mode', type=str, default='on', choices=['on','off'], help='off にするとアラート表示を無効化')
     # カメラのバックエンド/向き（Raspberry Pi を想定）
     p.add_argument('--backend', type=str, default='auto', choices=['auto','opencv','picamera2','zmq'], help='使用するカメラバックエンド')
@@ -81,7 +82,9 @@ def main():
         except Exception as e:
             print('Failed to load model:', e)
     overlay = Overlay()
-    logger = CSVLogger(args.log, meta={
+    # ログファイルの自動命名（ディレクトリのみ指定、または未指定の場合）
+    log_path = args.log if args.log else ('logs' if args.auto_log_name else None)
+    logger = CSVLogger(log_path, meta={
         'session': args.session,
         'participant': args.participant,
         'task': args.task,
@@ -93,7 +96,12 @@ def main():
         'rotate': args.rotate,
         'flip_h': args.flip_h,
         'flip_v': args.flip_v,
-    }) if args.log else None
+        'ear_threshold_ratio': args.ear_threshold_ratio,
+        'ear_baseline_init': args.ear_baseline_init,
+    }, auto_name=args.auto_log_name) if log_path else None
+    
+    if logger:
+        print(f"Logging to: {logger.path}")
 
     last_alert_time = 0.0
     cooldown_sec = 60.0
