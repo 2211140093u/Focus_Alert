@@ -320,6 +320,9 @@ def main_gui():
                     current_screen = 'data'
                 elif selected == 'options':
                     current_screen = 'options'
+                elif selected == 'quit':
+                    # 終了ボタンが押された
+                    break
         
         elif current_screen == 'measure':
             # 計測を開始
@@ -449,6 +452,10 @@ def main_gui():
             break
     
     cv2.destroyAllWindows()
+    # 終了時にシグナルを送って親プロセス（起動スクリプト）に通知
+    # 起動スクリプト側でAPP_PIDの終了を監視しているため、ここで終了すれば自動的にカメラプロキシも終了する
+    print("[app_gui] Exiting...")
+    sys.exit(0)
 
 
 if __name__ == '__main__':

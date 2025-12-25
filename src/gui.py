@@ -75,6 +75,19 @@ class MainMenu:
         cv2.putText(img, text3, (tx3, ty3), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         buttons.append(('options', btn3_rect))
         
+        # 終了ボタン（画面下部）
+        btn4_y = self.height - button_height - 20
+        btn4_rect = (button_x, btn4_y, button_x + button_width, btn4_y + button_height)
+        color4 = (150, 0, 0) if self.selected == 'quit' else (100, 0, 0)
+        cv2.rectangle(img, (button_x, btn4_y), (button_x + button_width, btn4_y + button_height), color4, -1)
+        cv2.rectangle(img, (button_x, btn4_y), (button_x + button_width, btn4_y + button_height), (255, 255, 255), 2)
+        text4 = "終了"
+        (tw4, th4), _ = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        tx4 = button_x + (button_width - tw4) // 2
+        ty4 = btn4_y + (button_height + th4) // 2
+        cv2.putText(img, text4, (tx4, ty4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+        buttons.append(('quit', btn4_rect))
+        
         return img, buttons
     
     def handle_click(self, x, y, buttons):

@@ -50,6 +50,8 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
 
 (
+  # エラーハンドリングを改善（確実にログに出力されるように）
+  exec >"$PROXY_LOG" 2>&1
   # pyenvの影響を排除（環境変数をクリア）
   unset PYENV_VERSION
   unset PYENV_VIRTUAL_ENV
@@ -65,11 +67,12 @@ PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
     echo "[cam_proxy] ERROR: Picamera2 import failed!" >&2
     exit 1
   fi
+  echo "[cam_proxy] Starting camera proxy..."
   # システムPythonを直接実行
   exec "$SYSTEM_PYTHON3" "$PROJ_DIR/scripts/cam_proxy.py" \
     --url "$URL" --topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY"
-) >"$PROXY_LOG" 2>&1 &
+) &
 PROXY_PID=$!
 echo "[launcher] cam_proxy started pid=$PROXY_PID (log: $PROXY_LOG)"
 
@@ -87,12 +90,17 @@ fi
 
 APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
 (
+  # エラーハンドリングを改善（確実にログに出力されるように）
+  exec >"$APP_LOG" 2>&1
   # 環境変数の設定
   export DISPLAY="${DISPLAY:-:0}"
   export PYTHONUNBUFFERED=1
   # フルスクリーンモードの制御（環境変数で無効化可能）
   # Screen Sharingで確認する場合は FOCUS_ALERT_FULLSCREEN=0 を設定
   export FOCUS_ALERT_FULLSCREEN="${FOCUS_ALERT_FULLSCREEN:-1}"
+  echo "[app_gui] Starting GUI application..."
+  echo "[app_gui] Python version: $(python --version 2>&1)"
+  echo "[app_gui] Project directory: $PROJ_DIR"
   # GUI版アプリを起動（メインメニューから選択可能）
   exec python "$PROJ_DIR/src/app_gui.py" \
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
@@ -100,15 +108,35 @@ APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
     --display-width 320 --display-height 480 \
     --log-dir "$APP_LOG_DIR" \
     --config-dir "$PROJ_DIR/config"
-) >"$APP_LOG" 2>&1 &
+) &
 APP_PID=$!
 echo "[launcher] app (GUI) started pid=$APP_PID (log: $APP_LOG)"
 
 echo "[launcher] To stop: kill $PROXY_PID $APP_PID"
 echo "[launcher] Press Ctrl+C to stop both processes"
 
+# クリーンアップ関数
+cleanup() {
+    echo "[launcher] Cleaning up..."
+    kill $PROXY_PID $APP_PID 2>/dev/null || true
+    exit 0
+}
+
 # シグナルハンドリング: Ctrl+Cで両方のプロセスを終了
-trap "kill $PROXY_PID $APP_PID 2>/dev/null; exit" INT TERM
+trap cleanup INT TERM
+
+# アプリプロセスが終了したら、カメラプロキシも終了させる
+# APP_PIDを監視し、終了したらPROXY_PIDも終了
+(
+    while kill -0 $APP_PID 2>/dev/null; do
+        sleep 1
+    done
+    echo "[launcher] App process ended, stopping camera proxy..."
+    kill $PROXY_PID 2>/dev/null || true
+) &
 
 # 両方のプロセスが終了するまで待機
-wait
+wait $APP_PID 2>/dev/null || true
+wait $PROXY_PID 2>/dev/null || true
+
+cleanup
