@@ -60,7 +60,12 @@ fi
 
 APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
 (
+  # 環境変数の設定
+  export DISPLAY="${DISPLAY:-:0}"
   export PYTHONUNBUFFERED=1
+  # フルスクリーンモードの制御（環境変数で無効化可能）
+  # Screen Sharingで確認する場合は FOCUS_ALERT_FULLSCREEN=0 を設定
+  export FOCUS_ALERT_FULLSCREEN="${FOCUS_ALERT_FULLSCREEN:-1}"
   # GUI版アプリを起動（メインメニューから選択可能）
   exec python "$PROJ_DIR/src/app_gui.py" \
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
