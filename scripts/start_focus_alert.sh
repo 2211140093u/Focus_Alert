@@ -29,9 +29,20 @@ PROJ_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJ_DIR"
 
 # 1) カメラ送信プロセスを system python (3.13) でバックグラウンド起動
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "python3 not found. Please install system python." >&2
-  exit 1
+# システムPythonのパスを明示的に指定（pyenvの影響を排除）
+SYSTEM_PYTHON3="/usr/bin/python3"
+if [ ! -x "$SYSTEM_PYTHON3" ]; then
+    # 代替パスを試す
+    if [ -x "/usr/bin/python3.13" ]; then
+        SYSTEM_PYTHON3="/usr/bin/python3.13"
+    elif [ -x "/usr/bin/python3.12" ]; then
+        SYSTEM_PYTHON3="/usr/bin/python3.12"
+    elif [ -x "/usr/bin/python3.11" ]; then
+        SYSTEM_PYTHON3="/usr/bin/python3.11"
+    else
+        echo "System python3 not found. Please install system python." >&2
+        exit 1
+    fi
 fi
 
 mkdir -p "$APP_LOG_DIR"
@@ -39,7 +50,12 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
 
 ( \
-  exec python3 "$PROJ_DIR/scripts/cam_proxy.py" \
+  # pyenvの影響を排除（環境変数をクリア）
+  unset PYENV_VERSION
+  unset PYENV_VIRTUAL_ENV
+  unset PYENV_ROOT
+  # システムPythonを直接実行
+  exec "$SYSTEM_PYTHON3" "$PROJ_DIR/scripts/cam_proxy.py" \
     --url "$URL" --topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY" \
 ) >"$PROXY_LOG" 2>&1 &
