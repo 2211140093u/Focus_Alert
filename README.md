@@ -8,43 +8,73 @@
 - 虹彩ランドマークを用いた視線オフセット（平滑化、中心キャリブレーション、逸脱レベルEMA）
 - ヒステリシス/クールダウン付きのリスクスコアと画面オーバーレイ表示
 - CSV記録（frame/event/meta）、実験用ホットキー、解析ノートブック（AUC・F1・遅延）
+- 3.5インチタッチモニタ（320×480）対応の最適化されたUI
+- リアルタイムカメラ状態表示
 
-## Setup
+## クイックスタート
 
-1) Python 3.10–3.11 仮想環境を作成・有効化
-2) 依存をインストール
+**最短手順は [QUICK_START.md](QUICK_START.md) を参照してください。**
+
+### PCでの動作確認
+
+詳細は [PCセットアップガイド](docs/PC_SETUP.md) を参照してください。
+
+1. 仮想環境を作成：
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
+
+2. 依存パッケージをインストール：
+```bash
 pip install -r requirements.txt
 ```
 
-## Quick Start
-
-- 基本起動（表示・記録）
-```
-python src/app.py --cam 0 --width 640 --height 480 --log logs/run.csv
+3. アプリを起動：
+```bash
+python src/app.py --cam 0 --width 640 --height 480 --log logs/test.csv
 ```
 
-- カメラや解像度
-```
-python src/app.py --cam 0 --width 640 --height 480
+または、起動スクリプトを使用：
+- Windows: `scripts\start_focus_alert_pc.bat` をダブルクリック
+- Mac/Linux: `./scripts/start_focus_alert_pc.sh`
+
+### Raspberry Pi 5での起動
+
+詳細は [Raspberry Piセットアップガイド](docs/RASPBERRY_PI_SETUP.md) を参照してください。
+
+1. デスクトップショートカットを作成（ワンタッチ起動）
+2. または、ターミナルから：
+```bash
+./scripts/start_focus_alert.sh
 ```
 
-- アラート非表示・記録のみ（可視化目的）
-```
-python src/app.py --alert-mode off --log logs/work.csv
-```
+## システム構成
+
+### PC環境
+- Python 3.10-3.11
+- OpenCV（ウェブカメラ対応）
+- MediaPipe（顔・虹彩検出）
+
+### Raspberry Pi 5環境
+- System Python 3.13（Picamera2用）
+- pyenv Python 3.11（アプリ用）
+- Raspberry Pi Camera V3 wide
+- 3.5インチタッチモニタ（320×480）
+- 二重プロセス構成（ZMQ経由で通信）
 
 ## CLI Options（主要）
 
 - `--cam` カメラ番号（既定 0）
 - `--width --height` 解像度（既定 640x480）
 - `--log` CSV出力パス（例: logs/run.csv）
+- `--backend` カメラバックエンド（auto/opencv/picamera2/zmq）
+- `--alert-mode` on | off（offで画面のアラート文言を非表示）
 - `--session --participant --task` 実験メタ情報
-- `--calib-seconds` 起動直後のキャリブレーション時間（既定 60）
-- `--alert-mode` on | off（offで画面のアラート文言を非表示、ログ/スコア計算は維持）
 
-## Hotkeys（実行中）
+## 操作方法
 
+### キーボード操作
 - `s` ブロック開始（block_id採番）
 - `e` ブロック終了
 - `m` 任意マーカー（注釈）
@@ -52,17 +82,26 @@ python src/app.py --alert-mode off --log logs/work.csv
 - `c` 視線センター再キャリブレーション（中央注視で押下）
 - `q` 終了
 
-## Overlay（画面左上のパネル）
+### タッチ操作（Raspberry Pi）
+- 画面下部のボタンをタッチして操作
+- Start/End/Marker/Distract/Calib/Quit
 
+## 画面表示
+
+### 情報パネル（左上）
+- カメラ状態（接続・FPS）
 - Face/Iris 検出状態
-- EAR（現在/基準/閾値）、Blink数、長瞬目フラグ
-- Gaze（値/閾値/バイアス/オフレベル）
-- FPS、Risk、アラート表示
+- EAR（現在値）、Blinks（まばたき回数）
+- Gaze（視線方向・逸脱状態）
+- Risk（リスクスコア）
 
-## Personalization（本バージョンでは未使用）
-
-- 今回のバージョンでは、個人に合わせた学習やモデルの保存/読込はおこなわない
-- セッション内の短期安定化（EARのEWMA、視線の中心キャリブレーション）だけを使用する
+### ボタン（下部）
+- Start: ブロック開始
+- End: ブロック終了
+- Mark: マーカー
+- Dist: 注意散漫トグル
+- Calib: 視線キャリブレーション
+- Quit: 終了
 
 ## Logging（CSV）
 
@@ -70,36 +109,47 @@ python src/app.py --alert-mode off --log logs/work.csv
 - 代表カラム: `ts,row_type,session,participant,task,phase,block_id,ear,ear_base,ear_thr,blink_count,is_closed,long_close,gaze,gaze_thr,gaze_bias,gaze_offlvl,risk,alert,event,info`
 - `event`: `block_start/end`, `marker`, `distractor_start/end`, `calibrate_center` など
 
-## Analysis Notebook（本バージョンでは未使用）
-
-- `notebooks/analysis.ipynb`
-  - ログ読み込みと整形
-  - 可視化（Risk, EAR, Gaze, Alert, distractor）
-  - 混同行列・Precision/Recall/F1・ROC-AUC
-  - 検出遅延（distractor_start → 最初のアラートまで）
-- 使い方: 先頭セルの `LOG_PATHS` にCSVを指定し、全セル実行
-
 ## Reports
 
-- 計測したcsvデータをグラフ化しhtmlファイルを作成する
-- 使用方法
-```
+計測したCSVデータをグラフ化しHTMLファイルを作成：
+
+```bash
 python scripts/report.py --log logs/pc_test.csv --out reports/report.html
 ```
 
-## Tips
+## トラブルシューティング
 
-- distractor区間を擬似ラベルとして感度/特異度/遅延を算出
-- もしくは課題スコア（反応時間/正答率）の悪化オンセットを自動算出してラベル化
+### カメラが開けない
+- カメラが他のアプリケーションで使用されていないか確認
+- カメラ番号を変更（`--cam 1`など）
+- 権限を確認（Mac/Linuxでは`sudo`が必要な場合があります）
 
-## Troubleshooting
+### MediaPipeがエラーを出す
+- 仮想環境が正しく有効化されているか確認
+- `pip install --upgrade mediapipe`で再インストール
 
-- アラートが出ない: 長瞬目（>0.5s）や視線を一定方向に1–2秒維持して確認。必要なら `fusion.py` の `self.hi` を下げる。
-- Gazeがズレる: 画面中央注視で `c` を押してバイアス補正。照明や顔角度を調整。
-- IrisがNOになる: 眼鏡の反射や暗さが原因。照明を明るく、顔を近めに、角度を調整。
+### アラートが出ない
+- 長瞬目（>0.5s）や視線を一定方向に1–2秒維持して確認
+- 必要なら `fusion.py` の `self.hi` を下げる
 
-## Raspberry Pi 5（後段移植メモ）
+### Gazeがズレる
+- 画面中央注視で `c` を押してバイアス補正
+- 照明や顔角度を調整
 
-- Pi OS 64-bit、libcamera有効化、mediapipe/opencvをインストール
-- DSIタッチは同梱手順に従いセットアップ
-- パフォーマンス: 480p推奨、Poseは後続拡張時にサブサンプリング
+### IrisがNOになる
+- 眼鏡の反射や暗さが原因
+- 照明を明るく、顔を近めに、角度を調整
+
+## ドキュメント
+
+- [クイックスタート](QUICK_START.md) - 最短手順（推奨）
+- [PCセットアップガイド](docs/PC_SETUP.md) - PCでの詳細な動作確認手順
+- [Raspberry Piセットアップガイド](docs/RASPBERRY_PI_SETUP.md) - Raspberry Piでのワンタッチ起動設定
+- [レポート作成ガイド](docs/REPORT_GUIDE.md) - レポートの作成方法と記録項目の説明
+- [よくある質問（FAQ）](docs/FAQ.md) - よくある質問と回答
+- [セットアップ手順まとめ](docs/SUMMARY.md) - 全手順の概要
+- [アイコン設定ガイド](docs/INSTALL_ICON.md) - デスクトップアイコンの設定方法
+
+## License
+
+（ライセンス情報を記載）
