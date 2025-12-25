@@ -19,6 +19,8 @@ class BlinkDetector:
         self.base_alpha = 0.05
         # セッション中の基準値の適応を無効化できるフラグ（評価フェーズなど）
         self.adapt_enabled = True
+        # EAR閾値の比率（基準値の何%で閉眼と判定するか）
+        self.ear_threshold_ratio = 0.90
 
     @staticmethod
     def _ear(pts):
@@ -54,8 +56,8 @@ class BlinkDetector:
             if not self.closed:
                 self.open_baseline = (1 - self.base_alpha) * self.open_baseline + self.base_alpha * candidate
 
-        # 相対しきい値: 基準値の約90%未満で「閉眼」とみなす
-        thresh = self.open_baseline * 0.90
+        # 相対しきい値: 基準値の指定比率未満で「閉眼」とみなす
+        thresh = self.open_baseline * self.ear_threshold_ratio
 
         if ear < thresh:
             self.close_frames += 1
