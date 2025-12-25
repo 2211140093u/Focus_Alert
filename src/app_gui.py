@@ -351,18 +351,26 @@ def main_gui():
                 last_click['x'] = None
                 result = data_viewer.handle_click(x, y, buttons)
                 if result == 'back':
-                    current_screen = 'main'
+                    if data_viewer.mode == 'report':
+                        data_viewer.mode = 'view'
+                    else:
+                        current_screen = 'main'
                 elif result == 'report':
                     # レポート生成
-                    report_path = data_viewer.generate_report()
-                    if report_path:
-                        print(f"Report generated: {report_path}")
+                    report_result = data_viewer.generate_report()
+                    if report_result == 'viewer_ready':
+                        # レポートビューアを起動
+                        data_viewer.mode = 'report'
+                    elif report_result:
+                        print(f"Report generated: {report_result}")
                         # レポート表示（簡易版：パスを表示）
+                        img, _ = data_viewer.draw()
                         cv2.putText(img, "Report generated!", (20, 150), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.imshow(win_name, img)
                         cv2.waitKey(2000)  # 2秒表示
                     else:
+                        img, _ = data_viewer.draw()
                         cv2.putText(img, "Report failed!", (20, 150), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
                         cv2.imshow(win_name, img)
@@ -390,6 +398,17 @@ def main_gui():
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
                     cv2.imshow(win_name, img)
                     cv2.waitKey(1500)
+                elif result == 'prev' or result == 'next':
+                    # レポートビューアのページ送り（既に処理済み）
+                    pass
+            
+            # キーボード操作（レポートビューア用）
+            if data_viewer.mode == 'report':
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('a') or key == ord('A'):  # 前のページ
+                    data_viewer.report_viewer.prev_page()
+                elif key == ord('d') or key == ord('D'):  # 次のページ
+                    data_viewer.report_viewer.next_page()
         
         elif current_screen == 'options':
             img, buttons = options_menu.draw()

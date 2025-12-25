@@ -184,6 +184,84 @@ def summarize(frames: pd.DataFrame):
     return s
 
 
+def save_report_images(sections, image_dir, html_path):
+    """レポートの各グラフを個別画像として保存し、メタデータを生成"""
+    import json
+    import base64
+    
+    html_name = Path(html_path).stem
+    # レポートベース名（ファイル名のみ、拡張子なし）
+    report_base_name = html_name.replace('.html', '')
+    
+    # 最初のセクションのみ処理（複数セクション対応は将来の拡張）
+    if not sections:
+        return
+    
+    section = sections[0]
+    pages = []
+    
+    # メタ情報ページ
+    if section.get('meta'):
+        pages.append({
+            'type': 'meta',
+            'title': f"{section['title']} - 情報",
+            'data': section['meta']
+        })
+    
+    # サマリ統計ページ
+    if section.get('summary'):
+        pages.append({
+            'type': 'summary',
+            'title': f"{section['title']} - 統計",
+            'data': section['summary']
+        })
+    
+    # 画像ページ（各グラフを1ページずつ）
+    image_b64_list = section.get('images', [])
+    image_types = ['時系列グラフ', '分布ヒストグラム', '視線散布図', '視線ヒートマップ']
+    
+    for img_idx, img_b64 in enumerate(image_b64_list):
+        if img_idx < len(image_types):
+            img_title = f"{section['title']} - {image_types[img_idx]}"
+        else:
+            img_title = f"{section['title']} - グラフ{img_idx + 1}"
+        
+        # 画像ファイル名
+        img_filename = f"{report_base_name}_p{len(pages)}.png"
+        img_path = os.path.join(image_dir, img_filename)
+        
+        # Base64デコードして保存
+        try:
+            img_data = base64.b64decode(img_b64)
+            with open(img_path, 'wb') as f:
+                f.write(img_data)
+            
+            # 相対パスで保存（report_dirからの相対パス）
+            rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
+            pages.append({
+                'type': 'image',
+                'title': img_title,
+                'path': rel_path
+            })
+        except Exception as e:
+            print(f"Error saving image {img_idx}: {e}")
+    
+    # メタデータを保存
+    meta_filename = f"{report_base_name}_meta.json"
+    meta_file = os.path.join(image_dir, meta_filename)
+    meta_data = {
+        'title': section['title'],
+        'meta': section.get('meta', {}),
+        'pages': pages
+    }
+    
+    with open(meta_file, 'w', encoding='utf-8') as f:
+        json.dump(meta_data, f, indent=2, ensure_ascii=False)
+    
+    print(f"Saved report images to {image_dir}")
+    print(f"Saved metadata to {meta_file}")
+
+
 def html_report(sections, title="Focus Alert Session Report"):
     html = [
         "<html><head><meta charset='utf-8'><title>{}</title>".format(title),
@@ -216,6 +294,8 @@ def main():
     ap.add_argument("--log", required=True, nargs="+", help="CSV ログのパス（複数可）")
     ap.add_argument("--out", required=True, help="出力HTMLのパス")
     ap.add_argument("--title", default="Focus Alert Session Report")
+    ap.add_argument("--save-images", action="store_true", help="グラフを個別画像ファイルとして保存（アプリ内表示用）")
+    ap.add_argument("--image-dir", default=None, help="画像保存ディレクトリ（--save-images使用時）")
     args = ap.parse_args()
 
     sections = []
@@ -264,6 +344,11 @@ def main():
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"Saved report to {args.out}")
+    
+    # アプリ内表示用の画像とメタデータを保存
+    if args.save_images:
+        image_dir = args.image_dir if args.image_dir else out_dir
+        save_report_images(sections, image_dir, args.out)
 
 
 if __name__ == "__main__":

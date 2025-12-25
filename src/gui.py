@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 from virtual_keyboard import VirtualKeyboard
+from report_viewer import ReportViewer
 
 class MainMenu:
     """メインメニュー画面"""
@@ -232,6 +233,7 @@ class DataViewer:
         self.mode = 'list'  # 'list', 'view', 'edit'
         self.keyboard = VirtualKeyboard(width=width, height=height)
         self.original_note = ""  # 編集前のメモ
+        self.report_viewer = ReportViewer(width=width, height=height)
         
     def get_log_files(self):
         """ログファイル一覧を取得"""
@@ -252,6 +254,8 @@ class DataViewer:
             return self._draw_view(img)
         elif self.mode == 'edit':
             return self._draw_edit(img)
+        elif self.mode == 'report':
+            return self.report_viewer.draw()
         return img, []
     
     def _draw_list(self, img):
@@ -446,12 +450,23 @@ class DataViewer:
         for name, (x1, y1, x2, y2) in buttons:
             if x1 <= x <= x2 and y1 <= y <= y2:
                 if name == 'back':
-                    if self.mode == 'view' or self.mode == 'edit':
-                        self.mode = 'list'
+                    if self.mode == 'view' or self.mode == 'edit' or self.mode == 'report':
+                        if self.mode == 'report':
+                            self.mode = 'view'
+                        else:
+                            self.mode = 'list'
                         return None
                     return 'back'
                 elif name == 'report':
                     return 'report'
+                elif name == 'prev' or name == 'next':
+                    # レポートビューアのページ送り
+                    if self.mode == 'report':
+                        if name == 'prev':
+                            self.report_viewer.prev_page()
+                        else:
+                            self.report_viewer.next_page()
+                    return None
                 elif name == 'edit':
                     # メモ編集モードに移行
                     self.original_note = self.load_note_from_file()
@@ -482,7 +497,7 @@ class DataViewer:
         return False
     
     def generate_report(self, report_dir='reports'):
-        """レポートを生成"""
+        """レポートを生成（画像も保存）"""
         if not self.selected_file:
             return None
         
@@ -495,17 +510,21 @@ class DataViewer:
         report_path = os.path.join(report_dir, report_name)
         os.makedirs(report_dir, exist_ok=True)
         
-        # レポート生成スクリプトを呼び出す
+        # レポート生成スクリプトを呼び出す（画像も保存）
         import subprocess
         try:
             script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             report_script = os.path.join(script_dir, 'scripts', 'report.py')
             result = subprocess.run(
-                ['python', report_script, '--log', filepath, '--out', report_path],
+                ['python', report_script, '--log', filepath, '--out', report_path, 
+                 '--save-images', '--image-dir', report_dir],
                 capture_output=True,
                 text=True
             )
             if result.returncode == 0:
+                # レポートビューアに読み込む
+                if self.report_viewer.load_report(filepath):
+                    return 'viewer_ready'
                 return report_path
             else:
                 print(f"Report generation error: {result.stderr}")
