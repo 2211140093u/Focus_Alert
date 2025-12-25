@@ -106,8 +106,12 @@ def run_measurement(args, settings=None):
     
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(win_name, display_width, display_height)
-    if args.backend == 'zmq':
-        cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # フルスクリーンモード（環境変数で制御可能）
+    if args.backend == 'zmq' and os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
+        try:
+            cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        except Exception as e:
+            print(f"Warning: Could not set fullscreen mode: {e}")
     
     frame_failure_count = 0
     max_failures = 30
@@ -255,6 +259,8 @@ def main_gui():
     parser.add_argument('--display-width', type=int, default=320)
     parser.add_argument('--display-height', type=int, default=480)
     parser.add_argument('--backend', type=str, default='zmq', choices=['auto','opencv','picamera2','zmq'])
+    parser.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ URL for camera proxy')
+    parser.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ topic for camera proxy')
     parser.add_argument('--log-dir', type=str, default='logs')
     parser.add_argument('--config-dir', type=str, default='config')
     args = parser.parse_args()
@@ -273,7 +279,12 @@ def main_gui():
     win_name = 'Focus Alert - Main Menu'
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(win_name, args.display_width, args.display_height)
-    cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # フルスクリーンモード（環境変数で制御可能）
+    if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
+        try:
+            cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        except Exception as e:
+            print(f"Warning: Could not set fullscreen mode: {e}")
     
     last_click = {'x': None, 'y': None, 'ts': 0}
     current_screen = 'main'  # 'main', 'measure', 'data', 'options'
@@ -319,8 +330,8 @@ def main_gui():
                 rotate=0,
                 flip_h=False,
                 flip_v=False,
-                zmq_url='tcp://127.0.0.1:5555',
-                zmq_topic='frame',
+                zmq_url=args.zmq_url,
+                zmq_topic=args.zmq_topic,
                 session=None,
                 participant=None,
                 task=None,
@@ -339,7 +350,12 @@ def main_gui():
             current_screen = 'main'
             cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(win_name, args.display_width, args.display_height)
-            cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            # フルスクリーンモード（環境変数で制御可能）
+            if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
+                try:
+                    cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                except Exception as e:
+                    print(f"Warning: Could not set fullscreen mode: {e}")
             cv2.setMouseCallback(win_name, on_mouse)
         
         elif current_screen == 'data':

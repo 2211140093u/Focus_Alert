@@ -7,10 +7,154 @@
 - Raspberry Pi OS がインストールされていること
 - Raspberry Pi Camera V3 wide が接続されていること
 - 3.5インチタッチモニタ（320×480）が接続されていること
-- pyenv がインストールされ、Python 3.11環境が設定されていること
-- システムPython（3.13）にpicamera2がインストールされていること
+
+**注意**: このシステムは二重プロセス構成のため、以下のPython環境が必要です：
+- **システムPython 3.13**: Picamera2用（セットアップ手順0.2でインストール）
+- **pyenv Python 3.11**: MediaPipe用（セットアップ手順0.3-0.6でセットアップ）
+
+初回セットアップ時は、**セクション0（Python環境のセットアップ）**から開始してください。
 
 ## セットアップ手順
+
+### 0. Python環境のセットアップ
+
+このシステムは、**二重プロセス構成**を採用しています：
+- **システムPython 3.13**: Picamera2でカメラから映像を取得
+- **pyenv Python 3.11**: MediaPipeで顔検出と集中力判定
+
+#### 0.1 システムPythonの確認
+
+まず、システムにインストールされているPythonのバージョンを確認します：
+
+```bash
+python3 --version
+```
+
+Raspberry Pi OSでは、通常Python 3.11または3.13がインストールされています。本システムでは**Python 3.13**を使用します。
+
+#### 0.2 システムPythonへのPicamera2のインストール
+
+Picamera2は、システムPythonにインストールする必要があります：
+
+```bash
+# システムのパッケージマネージャーでインストール
+sudo apt-get update
+sudo apt-get install -y python3-picamera2 python3-numpy python3-opencv python3-zmq
+```
+
+インストールが完了したら、動作確認：
+
+```bash
+python3 -c "from picamera2 import Picamera2; print('Picamera2 OK')"
+```
+
+#### 0.3 pyenvのインストール
+
+pyenvは、複数のPythonバージョンを管理するツールです。インストール手順：
+
+```bash
+# 必要な依存パッケージをインストール
+sudo apt-get update
+sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
+  libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+  libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
+  libffi-dev liblzma-dev
+
+# pyenvをインストール
+curl https://pyenv.run | bash
+```
+
+インストール後、シェルの設定ファイルにpyenvのパスを追加します：
+
+```bash
+# ~/.bashrcに追加
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+
+# 設定を反映
+source ~/.bashrc
+```
+
+インストール確認：
+
+```bash
+pyenv --version
+```
+
+#### 0.4 Python 3.11のインストール（pyenv経由）
+
+pyenvを使ってPython 3.11をインストールします：
+
+```bash
+# Python 3.11.9をインストール（時間がかかります）
+pyenv install 3.11.9
+
+# インストールされたバージョンを確認
+pyenv versions
+```
+
+#### 0.5 仮想環境の作成
+
+プロジェクト用の仮想環境を作成します：
+
+```bash
+# プロジェクトディレクトリに移動（後で配置する場所）
+cd ~/Focus_Alert
+
+# Python 3.11.9を使用して仮想環境を作成
+pyenv virtualenv 3.11.9 focus-alert-311
+
+# このプロジェクトで使用するPythonバージョンを設定
+pyenv local focus-alert-311
+
+# 仮想環境が有効化されているか確認
+python --version  # Python 3.11.9 と表示されるはず
+
+# 実際のPython実行ファイルのパスを確認（最も確実）
+python -c "import sys; print(sys.executable)"
+# 出力例: /home/mm/.pyenv/versions/focus-alert-311/bin/python
+
+# 注意: which python が ~/.pyenv/shims/python を返すのは正常です
+# pyenvはshimsという仕組みでPythonを管理しているためです
+```
+
+#### 0.6 仮想環境への依存パッケージのインストール
+
+仮想環境に必要なパッケージをインストールします：
+
+```bash
+# 仮想環境が有効化されていることを確認
+python --version
+
+# pipを最新版にアップグレード
+pip install --upgrade pip
+
+# 依存パッケージをインストール
+pip install -r requirements.txt
+```
+
+インストールが完了したら、動作確認：
+
+```bash
+python -c "import mediapipe; print('MediaPipe OK')"
+python -c "import cv2; print('OpenCV OK')"
+python -c "import zmq; print('ZMQ OK')"
+```
+
+#### 0.7 環境設定の確認
+
+最後に、環境設定が正しく行われているか確認します：
+
+```bash
+# システムPython（Picamera2用）
+python3 --version
+python3 -c "from picamera2 import Picamera2; print('System Python: OK')"
+
+# pyenv仮想環境（MediaPipe用）
+python --version
+python -c "import mediapipe; print('pyenv Python: OK')"
+```
 
 ### 1. プロジェクトの配置
 
@@ -174,6 +318,77 @@ sudo apt-get install xinput-calibrator
 
 ## トラブルシューティング
 
+### Python環境の問題
+
+#### システムPythonでPicamera2がインポートできない
+
+```bash
+# Picamera2がインストールされているか確認
+python3 -c "from picamera2 import Picamera2"
+
+# インストールされていない場合
+sudo apt-get install -y python3-picamera2
+```
+
+#### pyenvが認識されない
+
+```bash
+# pyenvのパスが正しく設定されているか確認
+echo $PYENV_ROOT
+which pyenv
+
+# 設定ファイルを再読み込み
+source ~/.bashrc
+
+# pyenvの再インストールが必要な場合
+curl https://pyenv.run | bash
+```
+
+#### 仮想環境が有効化されない
+
+```bash
+# プロジェクトディレクトリで確認
+cd ~/Focus_Alert
+pyenv versions
+pyenv local focus-alert-311
+
+# 仮想環境が正しく設定されているか確認
+python --version  # Python 3.11.9 と表示されるはず
+
+# 実際のPython実行ファイルのパスを確認（最も確実）
+python -c "import sys; print(sys.executable)"
+# 出力例: /home/mm/.pyenv/versions/focus-alert-311/bin/python
+
+# 注意: which python が ~/.pyenv/shims/python を返すのは正常です
+# pyenvはshimsという仕組みでPythonを管理しているためです
+```
+
+#### MediaPipeがインポートできない
+
+```bash
+# 仮想環境が有効化されているか確認
+python --version
+
+# 仮想環境を再作成する場合
+pyenv virtualenv-delete focus-alert-311
+pyenv virtualenv 3.11.9 focus-alert-311
+pyenv local focus-alert-311
+pip install -r requirements.txt
+```
+
+#### 依存パッケージのインストールエラー
+
+```bash
+# pipを最新版にアップグレード
+pip install --upgrade pip
+
+# 個別にインストールしてエラーを確認
+pip install mediapipe
+pip install opencv-python
+pip install numpy
+pip install zmq
+```
+
 ### カメラが認識されない
 
 ```bash
@@ -182,17 +397,10 @@ libcamera-hello --list-cameras
 
 # カメラのテスト
 libcamera-hello
-```
 
-### pyenv環境が認識されない
-
-```bash
-# pyenvの確認
-pyenv versions
-
-# プロジェクトディレクトリで確認
-cd ~/Focus_Alert
-pyenv local focus-alert-311
+# カメラが認識されない場合、接続を確認
+# - カメラケーブルが正しく接続されているか
+# - カメラが有効化されているか（raspi-configで確認）
 ```
 
 ### 権限エラー
