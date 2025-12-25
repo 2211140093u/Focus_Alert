@@ -1,10 +1,22 @@
 import csv, time, os
+from datetime import datetime
 
 class CSVLogger:
-    def __init__(self, path, meta=None):
+    def __init__(self, path, meta=None, auto_name=True):
         self.path = path
         self.meta = meta or {}
-        os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
+        # 自動命名: パスが指定されていない、またはディレクトリのみ指定されている場合
+        if auto_name and (path is None or os.path.isdir(path) or (os.path.dirname(path) and not os.path.basename(path))):
+            if path is None or os.path.isdir(path):
+                log_dir = path if path and os.path.isdir(path) else 'logs'
+            else:
+                log_dir = os.path.dirname(path)
+            os.makedirs(log_dir, exist_ok=True)
+            # 日時ベースのファイル名を生成
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.path = os.path.join(log_dir, f'session_{timestamp}.csv')
+        else:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True) if os.path.dirname(self.path) else None
         self._init()
 
     def _init(self):
@@ -18,12 +30,16 @@ class CSVLogger:
                 'risk','alert','event','info'
             ])
             # 必要に応じてメタ行を書き込む
+            # 日時情報を追加
+            meta_with_time = self.meta.copy()
+            meta_with_time['start_time'] = datetime.now().isoformat()
+            meta_with_time['start_timestamp'] = time.time()
             w.writerow([
                 time.time(),'meta',
                 self.meta.get('session'), self.meta.get('participant'), self.meta.get('task'), self.meta.get('phase'), None,
                 None,None,None,None,None,None,
                 None,None,None,None,None,None,None,
-                None,None,'meta', str(self.meta)
+                None,None,'meta', str(meta_with_time)
             ])
 
     def write_frame(self, feats, score, alert, block_id=None):
@@ -50,3 +66,7 @@ class CSVLogger:
                 None,None,None,None,
                 None,None,event, info
             ])
+    
+    def write_note(self, note_text):
+        """メモを記録"""
+        self.write_event('note', info=note_text)

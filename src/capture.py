@@ -20,6 +20,26 @@ class _OpenCVCamera:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+        
+        # RGB変換を明示的に有効化（モノクロ問題の対策）
+        self.cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
+        
+        # カメラ品質の最適化設定
+        # 自動露出を有効化（明るさの自動調整）
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)  # 0.75 = 自動露出モード
+        # 自動フォーカスを有効化（可能な場合）
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+        # ホワイトバランスを自動に
+        self.cap.set(cv2.CAP_PROP_AUTO_WB, 1)
+        # 明るさを適度に設定（0.0-1.0、デフォルトは0.5）
+        self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 0.5)
+        # コントラストを適度に設定
+        self.cap.set(cv2.CAP_PROP_CONTRAST, 0.5)
+        # 彩度を適度に設定
+        self.cap.set(cv2.CAP_PROP_SATURATION, 0.5)
+        # シャープネスを適度に設定
+        self.cap.set(cv2.CAP_PROP_SHARPNESS, 0.5)
+        
         return self
 
     def read(self):
@@ -167,27 +187,62 @@ class Camera:
         self.impl = None
         self.zmq_url = zmq_url
         self.zmq_topic = zmq_topic
+        self._last_read_ok = False
+        self._consecutive_failures = 0
 
     def open(self):
-        if self.backend == 'zmq':
-            self.impl = _ZmqCamera(url=self.zmq_url, topic=self.zmq_topic).open()
-            return self
-        if self.backend in ('picamera2', 'auto'):
-            try:
-                self.impl = _PiCamera2Camera(width=self.width, height=self.height, fps=self.fps,
-                                             rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+        try:
+            if self.backend == 'zmq':
+                self.impl = _ZmqCamera(url=self.zmq_url, topic=self.zmq_topic).open()
                 return self
-            except Exception:
-                if self.backend == 'picamera2':
-                    raise
-        # 最後の手段として OpenCV カメラにフォールバック
-        self.impl = _OpenCVCamera(index=self.index, width=self.width, height=self.height, fps=self.fps,
-                                   rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
-        return self
+            if self.backend in ('picamera2', 'auto'):
+                try:
+                    self.impl = _PiCamera2Camera(width=self.width, height=self.height, fps=self.fps,
+                                                 rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+                    return self
+                except Exception as e:
+                    if self.backend == 'picamera2':
+                        raise
+                    print(f"Warning: Picamera2 failed, falling back to OpenCV: {e}")
+            # 最後の手段として OpenCV カメラにフォールバック
+            self.impl = _OpenCVCamera(index=self.index, width=self.width, height=self.height, fps=self.fps,
+                                       rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+            return self
+        except Exception as e:
+            print(f"Error opening camera: {e}")
+            raise
 
     def read(self):
-        return self.impl.read()
+        if self.impl is None:
+            return False, None
+        try:
+            ok, frame = self.impl.read()
+            self._last_read_ok = ok
+            if ok:
+                self._consecutive_failures = 0
+            else:
+                self._consecutive_failures += 1
+            return ok, frame
+        except Exception as e:
+            self._last_read_ok = False
+            self._consecutive_failures += 1
+            print(f"Error reading camera frame: {e}")
+            return False, None
+
+    def get_status(self):
+        """カメラの状態を取得"""
+        return {
+            'connected': self.impl is not None,
+            'last_read_ok': self._last_read_ok,
+            'consecutive_failures': self._consecutive_failures,
+            'backend': self.backend,
+        }
 
     def release(self):
         if self.impl is not None:
-            self.impl.release()
+            try:
+                self.impl.release()
+            except Exception as e:
+                print(f"Error releasing camera: {e}")
+            finally:
+                self.impl = None
