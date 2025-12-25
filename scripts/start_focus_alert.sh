@@ -61,15 +61,16 @@ fi
 APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
 (
   export PYTHONUNBUFFERED=1
-  # 受信アプリを起動
-  exec python "$PROJ_DIR/src/app.py" \
+  # GUI版アプリを起動（メインメニューから選択可能）
+  exec python "$PROJ_DIR/src/app_gui.py" \
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" \
-    --alert-mode off --learning off \
-    --log "$APP_LOG_DIR/pi_${TIMESTAMP}.csv"
+    --display-width 320 --display-height 480 \
+    --log-dir "$APP_LOG_DIR" \
+    --config-dir "$PROJ_DIR/config"
 ) >"$APP_LOG" 2>&1 &
 APP_PID=$!
-echo "[launcher] app started pid=$APP_PID (log: $APP_LOG)"
+echo "[launcher] app (GUI) started pid=$APP_PID (log: $APP_LOG)"
 
 echo "[launcher] To stop: kill $PROXY_PID $APP_PID"
 echo "[launcher] Press Ctrl+C to stop both processes"

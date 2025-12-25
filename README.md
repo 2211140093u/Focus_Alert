@@ -143,6 +143,7 @@ python scripts/report.py --log logs/pc_test.csv --out reports/report.html
 ## ドキュメント
 
 - [クイックスタート](QUICK_START.md) - 最短手順（推奨）
+- [GUI操作ガイド](docs/GUI_GUIDE.md) - GUI版アプリケーションの操作説明（Raspberry Pi用）
 - [PCセットアップガイド](docs/PC_SETUP.md) - PCでの詳細な動作確認手順
 - [Raspberry Piセットアップガイド](docs/RASPBERRY_PI_SETUP.md) - Raspberry Piでのワンタッチ起動設定
 - [レポート作成ガイド](docs/REPORT_GUIDE.md) - レポートの作成方法と記録項目の説明
