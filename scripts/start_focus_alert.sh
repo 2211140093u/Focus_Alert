@@ -54,7 +54,10 @@ PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
   unset PYENV_VERSION
   unset PYENV_VIRTUAL_ENV
   unset PYENV_ROOT
-  # システムPythonを直接実行
+  # PATHからpyenvのshimを除外
+  export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v pyenv | tr '\n' ':' | sed 's/:$//')
+  # システムPythonを直接実行（エラーも確実にログに出力）
+  set -x  # デバッグモード（コマンドをログに出力）
   exec "$SYSTEM_PYTHON3" "$PROJ_DIR/scripts/cam_proxy.py" \
     --url "$URL" --topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY" \
