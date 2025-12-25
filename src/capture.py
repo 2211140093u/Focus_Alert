@@ -158,6 +158,8 @@ class _ZmqCamera:
             return False, None
         jpg = parts[1]
         arr = np.frombuffer(jpg, dtype=np.uint8)
+        # cv2.imdecodeはJPEGをBGR形式でデコードする
+        # 送信側でRGB→BGRに変換してからエンコードしているため、デコード後は既にBGR形式
         frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if frame is None:
             return False, None

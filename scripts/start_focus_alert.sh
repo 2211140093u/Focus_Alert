@@ -49,18 +49,26 @@ mkdir -p "$APP_LOG_DIR"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
 
-( \
+(
   # pyenvの影響を排除（環境変数をクリア）
   unset PYENV_VERSION
   unset PYENV_VIRTUAL_ENV
   unset PYENV_ROOT
   # PATHからpyenvのshimを除外
   export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v pyenv | tr '\n' ':' | sed 's/:$//')
-  # システムPythonを直接実行（エラーも確実にログに出力）
-  set -x  # デバッグモード（コマンドをログに出力）
+  # エラーハンドリングを改善（起動メッセージをログに出力）
+  echo "[cam_proxy] Starting with system Python: $SYSTEM_PYTHON3"
+  echo "[cam_proxy] Project directory: $PROJ_DIR"
+  echo "[cam_proxy] Python version: $($SYSTEM_PYTHON3 --version 2>&1)"
+  echo "[cam_proxy] Checking picamera2 import..."
+  if ! "$SYSTEM_PYTHON3" -c "from picamera2 import Picamera2; print('Picamera2 OK')" 2>&1; then
+    echo "[cam_proxy] ERROR: Picamera2 import failed!" >&2
+    exit 1
+  fi
+  # システムPythonを直接実行
   exec "$SYSTEM_PYTHON3" "$PROJ_DIR/scripts/cam_proxy.py" \
     --url "$URL" --topic "$TOPIC" \
-    --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY" \
+    --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY"
 ) >"$PROXY_LOG" 2>&1 &
 PROXY_PID=$!
 echo "[launcher] cam_proxy started pid=$PROXY_PID (log: $PROXY_LOG)"
