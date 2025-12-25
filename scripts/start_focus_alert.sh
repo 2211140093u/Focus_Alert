@@ -72,3 +72,10 @@ APP_PID=$!
 echo "[launcher] app started pid=$APP_PID (log: $APP_LOG)"
 
 echo "[launcher] To stop: kill $PROXY_PID $APP_PID"
+echo "[launcher] Press Ctrl+C to stop both processes"
+
+# シグナルハンドリング: Ctrl+Cで両方のプロセスを終了
+trap "kill $PROXY_PID $APP_PID 2>/dev/null; exit" INT TERM
+
+# 両方のプロセスが終了するまで待機
+wait
