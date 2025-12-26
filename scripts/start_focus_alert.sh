@@ -111,6 +111,7 @@ APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" \
     --display-width 320 --display-height 480 \
+    --rotate-display \
     --log-dir "$APP_LOG_DIR" \
     --config-dir "$PROJ_DIR/config"
 ) &
