@@ -42,11 +42,11 @@ class MainMenu:
         color1 = (0, 150, 0) if self.selected == 'measure' else (0, 100, 0)
         cv2.rectangle(img, (button_x, btn1_y), (button_x + button_width, btn1_y + button_height), color1, -1)
         cv2.rectangle(img, (button_x, btn1_y), (button_x + button_width, btn1_y + button_height), (255, 255, 255), 2)
-        text1 = "計測開始"
-        (tw1, th1), _ = get_text_size_japanese(text1, 0.6)
+        text1 = "Start"
+        (tw1, th1), _ = cv2.getTextSize(text1, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         tx1 = button_x + (button_width - tw1) // 2
         ty1 = btn1_y + (button_height + th1) // 2
-        img = put_japanese_text(img, text1, (tx1, ty1), 0.6, (255, 255, 255), 2)
+        cv2.putText(img, text1, (tx1, ty1), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         buttons.append(('measure', btn1_rect))
         
         # データ確認ボタン
@@ -55,11 +55,11 @@ class MainMenu:
         color2 = (150, 150, 0) if self.selected == 'data' else (100, 100, 0)
         cv2.rectangle(img, (button_x, btn2_y), (button_x + button_width, btn2_y + button_height), color2, -1)
         cv2.rectangle(img, (button_x, btn2_y), (button_x + button_width, btn2_y + button_height), (255, 255, 255), 2)
-        text2 = "データ確認"
-        (tw2, th2), _ = get_text_size_japanese(text2, 0.6)
+        text2 = "View Data"
+        (tw2, th2), _ = cv2.getTextSize(text2, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         tx2 = button_x + (button_width - tw2) // 2
         ty2 = btn2_y + (button_height + th2) // 2
-        img = put_japanese_text(img, text2, (tx2, ty2), 0.6, (255, 255, 255), 2)
+        cv2.putText(img, text2, (tx2, ty2), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         buttons.append(('data', btn2_rect))
         
         # オプションボタン
@@ -68,11 +68,11 @@ class MainMenu:
         color3 = (150, 0, 150) if self.selected == 'options' else (100, 0, 100)
         cv2.rectangle(img, (button_x, btn3_y), (button_x + button_width, btn3_y + button_height), color3, -1)
         cv2.rectangle(img, (button_x, btn3_y), (button_x + button_width, btn3_y + button_height), (255, 255, 255), 2)
-        text3 = "オプション"
-        (tw3, th3), _ = get_text_size_japanese(text3, 0.6)
+        text3 = "Options"
+        (tw3, th3), _ = cv2.getTextSize(text3, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         tx3 = button_x + (button_width - tw3) // 2
         ty3 = btn3_y + (button_height + th3) // 2
-        img = put_japanese_text(img, text3, (tx3, ty3), 0.6, (255, 255, 255), 2)
+        cv2.putText(img, text3, (tx3, ty3), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         buttons.append(('options', btn3_rect))
         
         # 終了ボタン（画面下部）
@@ -81,11 +81,11 @@ class MainMenu:
         color4 = (150, 0, 0) if self.selected == 'quit' else (100, 0, 0)
         cv2.rectangle(img, (button_x, btn4_y), (button_x + button_width, btn4_y + button_height), color4, -1)
         cv2.rectangle(img, (button_x, btn4_y), (button_x + button_width, btn4_y + button_height), (255, 255, 255), 2)
-        text4 = "終了"
-        (tw4, th4), _ = get_text_size_japanese(text4, 0.6)
+        text4 = "Quit"
+        (tw4, th4), _ = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         tx4 = button_x + (button_width - tw4) // 2
         ty4 = btn4_y + (button_height + th4) // 2
-        img = put_japanese_text(img, text4, (tx4, ty4), 0.6, (255, 255, 255), 2)
+        cv2.putText(img, text4, (tx4, ty4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
         buttons.append(('quit', btn4_rect))
         
         return img, buttons
@@ -118,29 +118,29 @@ class OptionsMenu:
         img.fill(40)
         
         # タイトル
-        title = "オプション"
-        img = put_japanese_text(img, title, (20, 30), 0.7, (255, 255, 255), 2)
+        title = "Options"
+        cv2.putText(img, title, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
         
         # 戻るボタン
         back_rect = (10, self.height - 40, 80, self.height - 10)
         cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (100, 100, 100), -1)
         cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (255, 255, 255), 1)
-        img = put_japanese_text(img, "戻る", (15, self.height - 15), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Back", (15, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         # 保存ボタン
         save_rect = (self.width - 80, self.height - 40, self.width - 10, self.height - 10)
         cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (0, 150, 0), -1)
         cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (255, 255, 255), 1)
-        img = put_japanese_text(img, "保存", (self.width - 75, self.height - 15), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Save", (self.width - 75, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         # パラメータ表示
         y_start = 60
         line_height = 50
         params = [
-            ('ear_threshold_ratio', 'EAR閾値比率', 0.70, 0.98),
-            ('ear_baseline_init', 'EAR基準値', 0.30, 0.60),
-            ('risk_threshold', 'リスク閾値', 0.40, 0.70),
-            ('cooldown_sec', 'クールダウン(秒)', 30.0, 120.0),
+            ('ear_threshold_ratio', 'EAR Threshold', 0.70, 0.98),
+            ('ear_baseline_init', 'EAR Baseline', 0.30, 0.60),
+            ('risk_threshold', 'Risk Threshold', 0.40, 0.70),
+            ('cooldown_sec', 'Cooldown (sec)', 30.0, 120.0),
         ]
         
         buttons = [('back', back_rect), ('save', save_rect)]
@@ -150,12 +150,12 @@ class OptionsMenu:
             value = self.settings[key]
             
             # パラメータ名
-            img = put_japanese_text(img, label, (20, y + 15), 0.4, (255, 255, 255), 1)
+            cv2.putText(img, label, (20, y + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             
             # 値表示
             value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
             color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
-            img = put_japanese_text(img, value_str, (20, y + 35), 0.5, color, 2)
+            cv2.putText(img, value_str, (20, y + 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
             
             # 調整ボタン（-）
             minus_rect = (self.width - 100, y, self.width - 60, y + 30)
@@ -274,13 +274,13 @@ class DataViewer:
     def _draw_list(self, img):
         """ファイル一覧を描画"""
         # タイトル
-        img = put_japanese_text(img, "データ確認", (20, 30), 0.7, (255, 255, 255), 2)
+        cv2.putText(img, "View Data", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
         
         # 戻るボタン
         back_rect = (10, self.height - 40, 80, self.height - 10)
         cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (100, 100, 100), -1)
         cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (255, 255, 255), 1)
-        img = put_japanese_text(img, "戻る", (15, self.height - 15), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Back", (15, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         buttons = [('back', back_rect)]
         
@@ -307,14 +307,14 @@ class DataViewer:
     
     def _draw_view(self, img):
         """ファイル詳細を表示"""
-        img = put_japanese_text(img, "データ詳細", (20, 30), 0.7, (255, 255, 255), 2)
+        cv2.putText(img, "Data Details", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
         
         if self.selected_file:
             filepath = os.path.join(self.log_dir, self.selected_file)
             if os.path.exists(filepath):
                 # ファイル情報を表示
-                info_text = f"ファイル: {self.selected_file[:25]}"
-                img = put_japanese_text(img, info_text, (20, 70), 0.4, (255, 255, 255), 1)
+                info_text = f"File: {self.selected_file[:25]}"
+                cv2.putText(img, info_text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 
                 # ファイルサイズと更新日時
                 try:
@@ -323,14 +323,14 @@ class DataViewer:
                     mtime = os.path.getmtime(filepath)
                     from datetime import datetime
                     mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M')
-                    img = put_japanese_text(img, f"サイズ: {size_kb:.1f}KB", (20, 95), 0.35, (200, 200, 200), 1)
-                    img = put_japanese_text(img, f"更新: {mtime_str}", (20, 115), 0.35, (200, 200, 200), 1)
+                    cv2.putText(img, f"Size: {size_kb:.1f}KB", (20, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
+                    cv2.putText(img, f"Updated: {mtime_str}", (20, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
                     
                     # メモの表示（最新のメモを表示）
                     note = self.get_all_notes()
                     if note:
                         note_preview = note[:30] + '...' if len(note) > 30 else note
-                        img = put_japanese_text(img, f"メモ: {note_preview}", (20, 135), 0.3, (200, 200, 255), 1)
+                        cv2.putText(img, f"Note: {note_preview}", (20, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (200, 200, 255), 1, cv2.LINE_AA)
                 except:
                     pass
         
@@ -338,25 +338,25 @@ class DataViewer:
         back_rect = (10, self.height - 100, 80, self.height - 70)
         cv2.rectangle(img, (10, self.height - 100), (80, self.height - 70), (100, 100, 100), -1)
         cv2.rectangle(img, (10, self.height - 100), (80, self.height - 70), (255, 255, 255), 1)
-        img = put_japanese_text(img, "戻る", (15, self.height - 75), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Back", (15, self.height - 75), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         # レポート生成ボタン
         report_rect = (self.width - 100, self.height - 100, self.width - 10, self.height - 70)
         cv2.rectangle(img, (self.width - 100, self.height - 100), (self.width - 10, self.height - 70), (0, 150, 150), -1)
         cv2.rectangle(img, (self.width - 100, self.height - 100), (self.width - 10, self.height - 70), (255, 255, 255), 1)
-        img = put_japanese_text(img, "レポート", (self.width - 95, self.height - 75), 0.35, (255, 255, 255), 1)
+        cv2.putText(img, "Report", (self.width - 95, self.height - 75), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
         
         # メモ編集ボタン
         edit_rect = (10, self.height - 60, 100, self.height - 30)
         cv2.rectangle(img, (10, self.height - 60), (100, self.height - 30), (150, 150, 0), -1)
         cv2.rectangle(img, (10, self.height - 60), (100, self.height - 30), (255, 255, 255), 1)
-        img = put_japanese_text(img, "メモ編集", (15, self.height - 35), 0.35, (255, 255, 255), 1)
+        cv2.putText(img, "Edit Note", (15, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
         
         # 削除ボタン
         delete_rect = (self.width - 100, self.height - 60, self.width - 10, self.height - 30)
         cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (150, 0, 0), -1)
         cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (255, 255, 255), 1)
-        img = put_japanese_text(img, "削除", (self.width - 85, self.height - 35), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Delete", (self.width - 85, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         buttons = [('back', back_rect), ('report', report_rect), ('edit', edit_rect), ('delete', delete_rect)]
         return img, buttons
@@ -368,7 +368,7 @@ class DataViewer:
         
         # ファイル名表示
         if self.selected_file:
-            file_text = f"ファイル: {self.selected_file[:20]}"
+            file_text = f"File: {self.selected_file[:20]}"
             cv2.putText(kb_img, file_text, (10, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
         
         return kb_img, kb_buttons

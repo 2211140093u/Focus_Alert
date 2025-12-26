@@ -6,7 +6,7 @@ import numpy as np
 import os
 import json
 from pathlib import Path
-from japanese_text import put_japanese_text, get_text_size_japanese
+# from japanese_text import put_japanese_text, get_text_size_japanese  # English mode
 
 
 class ReportViewer:
@@ -28,10 +28,10 @@ class ReportViewer:
         report_base = os.path.join(self.report_dir, csv_name)
         
         # レポートメタデータファイルを探す
-        meta_file = os.path.join(self.report_dir, report_base_name + '_meta.json')
+        meta_file = os.path.join(self.report_dir, csv_name + '_meta.json')
         if not os.path.exists(meta_file):
             # 別のパターンも試す（HTMLファイル名から）
-            html_name = report_base_name + '.html'
+            html_name = csv_name + '.html'
             html_stem = Path(html_name).stem
             meta_file = os.path.join(self.report_dir, html_stem + '_meta.json')
             if not os.path.exists(meta_file):
@@ -65,7 +65,7 @@ class ReportViewer:
         img.fill(20)  # 暗い背景
         
         if not self.pages:
-            img = put_japanese_text(img, "レポートがありません", (20, self.height // 2), 0.5, (255, 255, 255), 1)
+            cv2.putText(img, "No Report", (20, self.height // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             return img, []
         
         # ページ情報
@@ -76,7 +76,7 @@ class ReportViewer:
         
         # タイトル表示
         title_y = 20
-        img = put_japanese_text(img, page_title, (10, title_y), 0.5, (255, 255, 255), 1)
+        cv2.putText(img, page_title, (10, title_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         
         # ページ番号表示
         page_text = f"{self.current_page + 1} / {len(self.pages)}"
@@ -95,7 +95,7 @@ class ReportViewer:
             for key, value in self.meta_info.items():
                 if value is not None:
                     text = f"{key}: {value}"
-                    img = put_japanese_text(img, text, (10, y), 0.35, (255, 255, 255), 1)
+                    cv2.putText(img, text, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
                     y += 20
                     if y > self.height - 80:
                         break
@@ -107,7 +107,7 @@ class ReportViewer:
             for key, value in summary.items():
                 if value is not None and not (isinstance(value, float) and np.isnan(value)):
                     text = f"{key}: {value:.2f}" if isinstance(value, float) else f"{key}: {value}"
-                    img = put_japanese_text(img, text, (10, y), 0.35, (255, 255, 255), 1)
+                    cv2.putText(img, text, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
                     y += 20
                     if y > self.height - 80:
                         break
@@ -146,7 +146,7 @@ class ReportViewer:
                                 y_offset2 >= 0 and x_offset2 >= 0):
                                 img[y_offset2:y_offset2+new_h2, x_offset2:x_offset2+new_w2] = resized2
                 except Exception as e:
-                    img = put_japanese_text(img, f"画像読み込みエラー: {e}", (10, content_y + 30), 0.4, (0, 0, 255), 1)
+                    cv2.putText(img, f"Image Load Error: {e}", (10, content_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         
         # ナビゲーションボタン
         buttons = []
@@ -155,7 +155,7 @@ class ReportViewer:
         back_rect = (10, self.height - 50, 70, self.height - 10)
         cv2.rectangle(img, (10, self.height - 50), (70, self.height - 10), (100, 100, 100), -1)
         cv2.rectangle(img, (10, self.height - 50), (70, self.height - 10), (255, 255, 255), 1)
-        img = put_japanese_text(img, "戻る", (15, self.height - 25), 0.4, (255, 255, 255), 1)
+        cv2.putText(img, "Back", (15, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         buttons.append(('back', back_rect))
         
         # 前のページボタン
@@ -163,7 +163,7 @@ class ReportViewer:
             prev_rect = (80, self.height - 50, 130, self.height - 10)
             cv2.rectangle(img, (80, self.height - 50), (130, self.height - 10), (80, 80, 80), -1)
             cv2.rectangle(img, (80, self.height - 50), (130, self.height - 10), (255, 255, 255), 1)
-            img = put_japanese_text(img, "<前", (85, self.height - 25), 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "<Prev", (85, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             buttons.append(('prev', prev_rect))
         
         # 次のページボタン
@@ -171,7 +171,7 @@ class ReportViewer:
             next_rect = (self.width - 80, self.height - 50, self.width - 10, self.height - 10)
             cv2.rectangle(img, (self.width - 80, self.height - 50), (self.width - 10, self.height - 10), (80, 80, 80), -1)
             cv2.rectangle(img, (self.width - 80, self.height - 50), (self.width - 10, self.height - 10), (255, 255, 255), 1)
-            img = put_japanese_text(img, "次>", (self.width - 75, self.height - 25), 0.4, (255, 255, 255), 1)
+            cv2.putText(img, "Next>", (self.width - 75, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             buttons.append(('next', next_rect))
         
         return img, buttons
