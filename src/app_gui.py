@@ -403,23 +403,6 @@ def main_gui():
                         print("File deleted")
                     else:
                         print("Failed to delete file")
-                elif result == 'note_saved':
-                    # メモが保存された
-                    print(f"Note saved for {data_viewer.selected_file}")
-                    # 成功メッセージを表示（簡易版）
-                    img, _ = data_viewer.draw()
-                    cv2.putText(img, "Note saved!", (20, 150), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.imshow(win_name, img)
-                    cv2.waitKey(1500)  # 1.5秒表示
-                elif result == 'note_error':
-                    # メモ保存エラー
-                    print("Failed to save note")
-                    img, _ = data_viewer.draw()
-                    cv2.putText(img, "Save failed!", (20, 150), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
-                    cv2.imshow(win_name, img)
-                    cv2.waitKey(1500)
                 elif result == 'prev' or result == 'next':
                     # レポートビューアのページ送り（既に処理済み）
                     pass
