@@ -3,6 +3,11 @@
 # 使い方: ./scripts/start_focus_alert.sh [--width 640] [--height 480] [--fps 30] [--quality 85]
 set -euo pipefail
 
+# 【追加】デスクトップ起動用にpyenvの初期化を明示的に行う
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
 WIDTH=640
 HEIGHT=480
 FPS=30
