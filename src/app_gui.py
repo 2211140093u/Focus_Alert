@@ -23,7 +23,7 @@ from logger import CSVLogger
 from gui import MainMenu, OptionsMenu, DataViewer
 
 
-def run_measurement(args, settings=None):
+def run_measurement(args, settings=None, rotate_display=False):
     """計測を実行"""
     # 設定を適用
     if settings:
@@ -71,7 +71,17 @@ def run_measurement(args, settings=None):
     last_click = {'x': None, 'y': None, 'ts': 0}
     win_name = 'Focus Alert - Measurement'
     
+    def rotate_coordinates_back(x, y, display_w, display_h):
+        """回転後の座標を元の座標に変換（90度時計回りの逆変換）"""
+        # 90度時計回り: (x, y) -> (y, height - x)
+        # 逆変換: (x, y) -> (display_h - y, x)
+        return (display_h - y, x)
+    
     def on_mouse(event, x, y, flags, param):
+        # 回転表示の場合、座標を元の座標系に変換
+        if rotate_display:
+            x, y = rotate_coordinates_back(x, y, display_width, display_height)
+        
         if event == cv2.EVENT_LBUTTONDOWN:
             last_click['x'] = x
             last_click['y'] = y
@@ -190,6 +200,10 @@ def run_measurement(args, settings=None):
                     int(y2 * scale + y_offset)
                 )
         
+        # 回転表示の場合、フレームを90度時計回りに回転
+        if rotate_display:
+            vis_display = cv2.rotate(vis_display, cv2.ROTATE_90_CLOCKWISE)
+        
         cv2.imshow(win_name, vis_display)
         cv2.setMouseCallback(win_name, on_mouse)
         key = cv2.waitKey(1) & 0xFF
@@ -261,12 +275,17 @@ def main_gui():
     parser.add_argument('--height', type=int, default=480)
     parser.add_argument('--display-width', type=int, default=320)
     parser.add_argument('--display-height', type=int, default=480)
+    parser.add_argument('--rotate-display', action='store_true', help='Display rotated 90 degrees clockwise (for landscape monitors)')
     parser.add_argument('--backend', type=str, default='zmq', choices=['auto','opencv','picamera2','zmq'])
     parser.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ URL for camera proxy')
     parser.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ topic for camera proxy')
     parser.add_argument('--log-dir', type=str, default='logs')
     parser.add_argument('--config-dir', type=str, default='config')
     args = parser.parse_args()
+    
+    # 回転表示の場合、表示サイズを入れ替え
+    if args.rotate_display:
+        args.display_width, args.display_height = args.display_height, args.display_width
     
     # 設定の読み込み
     settings_path = os.path.join(args.config_dir, 'settings.json')
@@ -292,7 +311,31 @@ def main_gui():
     last_click = {'x': None, 'y': None, 'ts': 0}
     current_screen = 'main'  # 'main', 'measure', 'data', 'options'
     
+    def rotate_coordinates_back(x, y, orig_width, orig_height):
+        """回転後の座標を元の座標に変換（90度時計回りの逆変換）
+        
+        横長（480x320）を時計回りに回転して縦長（320x480）にした場合：
+        - 横長の左側 → 縦長の上側
+        - 横長の上側 → 縦長の右側
+        - 横長の右側 → 縦長の下側
+        - 横長の下側 → 縦長の左側
+        
+        座標変換: (x', y') -> (orig_height - y', x')
+        """
+        # 回転後の座標(x', y')から元の座標(x, y)への変換
+        # 90度時計回り: (x, y) -> (y, orig_width - x)
+        # 逆変換: (x', y') -> (orig_height - y', x')
+        return (orig_height - y, x)
+    
     def on_mouse(event, x, y, flags, param):
+        # 回転表示の場合、座標を元の座標系に変換
+        # 回転後は表示サイズが入れ替わっているので、元のサイズで変換
+        if args.rotate_display:
+            # 元のサイズ（320x480）で変換
+            orig_width = args.display_height  # 回転後は入れ替わっているので
+            orig_height = args.display_width
+            x, y = rotate_coordinates_back(x, y, orig_width, orig_height)
+        
         if event == cv2.EVENT_LBUTTONDOWN:
             last_click['x'] = x
             last_click['y'] = y
@@ -307,6 +350,9 @@ def main_gui():
     while True:
         if current_screen == 'main':
             img, buttons = main_menu.draw()
+            # 回転表示の場合、フレームを90度時計回りに回転
+            if args.rotate_display:
+                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:
@@ -352,7 +398,7 @@ def main_gui():
                 ear_threshold_ratio=options_menu.settings.get('ear_threshold_ratio', 0.90),
                 ear_baseline_init=options_menu.settings.get('ear_baseline_init', 0.45),
             )
-            run_measurement(measure_args, settings=options_menu.settings)
+            run_measurement(measure_args, settings=options_menu.settings, rotate_display=args.rotate_display)
             current_screen = 'main'
             cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(win_name, args.display_width, args.display_height)
@@ -366,6 +412,9 @@ def main_gui():
         
         elif current_screen == 'data':
             img, buttons = data_viewer.draw()
+            # 回転表示の場合、フレームを90度時計回りに回転
+            if args.rotate_display:
+                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:
@@ -417,6 +466,9 @@ def main_gui():
         
         elif current_screen == 'options':
             img, buttons = options_menu.draw()
+            # 回転表示の場合、フレームを90度時計回りに回転
+            if args.rotate_display:
+                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:

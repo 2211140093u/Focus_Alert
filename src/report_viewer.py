@@ -118,6 +118,11 @@ class ReportViewer:
         
         elif page_type == 'image' and image_path:
             # 画像ページ
+            # パスを正規化（絶対パスに統一）
+            if not os.path.isabs(image_path):
+                image_path = os.path.join(self.report_dir, image_path)
+            image_path = os.path.normpath(image_path)  # パスを正規化
+            
             if os.path.exists(image_path):
                 try:
                     page_img = cv2.imread(image_path)
@@ -126,7 +131,8 @@ class ReportViewer:
                         aspect_ratio = img_w / img_h if img_h > 0 else 1.0
                         
                         # 画像が変わった場合は分割インデックスをリセット
-                        if self._current_image_path != image_path:
+                        current_path_norm = os.path.normpath(self._current_image_path) if self._current_image_path else None
+                        if current_path_norm != image_path:
                             self._current_image_path = image_path
                             self._split_part_idx = 0
                         
@@ -267,20 +273,14 @@ class ReportViewer:
     def next_page(self):
         """次のページに進む（分割表示の場合は分割部分を切り替え）"""
         # 横長グラフの分割表示の場合、まず分割部分を切り替え
-        if self._current_image_path:
-            page_info = self.pages[self.current_page]
-            if page_info.get('type') == 'image':
-                image_path = page_info.get('path', '')
-                if image_path:
-                    full_path = os.path.join(self.report_dir, image_path) if not os.path.isabs(image_path) else image_path
-                    if os.path.exists(full_path):
-                        page_img = cv2.imread(full_path)
-                        if page_img is not None:
-                            img_h, img_w = page_img.shape[:2]
-                            aspect_ratio = img_w / img_h if img_h > 0 else 1.0
-                            if aspect_ratio > 2.0 and self._split_part_idx < 2:
-                                self._split_part_idx += 1
-                                return True
+        if self._current_image_path and os.path.exists(self._current_image_path):
+            page_img = cv2.imread(self._current_image_path)
+            if page_img is not None:
+                img_h, img_w = page_img.shape[:2]
+                aspect_ratio = img_w / img_h if img_h > 0 else 1.0
+                if aspect_ratio > 2.0 and self._split_part_idx < 2:
+                    self._split_part_idx += 1
+                    return True
         # 通常のページ送り
         if self.current_page < len(self.pages) - 1:
             self.current_page += 1
