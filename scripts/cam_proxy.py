@@ -18,6 +18,7 @@ def main():
     ap.add_argument('--topic', default='frame')
     ap.add_argument('--width', type=int, default=640)
     ap.add_argument('--height', type=int, default=480)
+    ap.add_argument('--fps', type=int, default=30)
     ap.add_argument('--quality', type=int, default=85)
     args = ap.parse_args()
 
@@ -31,7 +32,7 @@ def main():
     # 【変更点1】 formatを "BGR888" に指定します
     # これにより、カメラから直接 OpenCV が好む BGR 形式でデータが来ます
     config = picam.create_preview_configuration(
-        main={"size": (args.width, args.height), "format": "BGR888"}
+    main={"size": (args.width, args.height), "format": "BGR888", "fps": args.fps}
     )
     picam.configure(config)
     picam.start()
