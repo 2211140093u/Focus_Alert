@@ -4,6 +4,7 @@
 """
 import cv2
 import numpy as np
+from japanese_text import put_japanese_text, get_text_size_japanese
 
 
 class VirtualKeyboard:
@@ -237,7 +238,7 @@ class VirtualKeyboard:
         ok_rect = (ok_x, func_y, ok_x + ok_w, func_y + key_height)
         cv2.rectangle(img, (ok_x, func_y), (ok_x + ok_w, func_y + key_height), (0, 150, 0), -1)
         cv2.rectangle(img, (ok_x, func_y), (ok_x + ok_w, func_y + key_height), (150, 150, 150), 1)
-        cv2.putText(img, "確定", (ok_x + 10, func_y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+        img = put_japanese_text(img, "確定", (ok_x + 10, func_y + 25), 0.4, (255, 255, 255), 1)
         buttons['key_ok'] = ok_rect
         
         # キャンセルボタン
@@ -246,7 +247,7 @@ class VirtualKeyboard:
         cancel_rect = (cancel_x, func_y, cancel_x + cancel_w, func_y + key_height)
         cv2.rectangle(img, (cancel_x, func_y), (cancel_x + cancel_w, func_y + key_height), (150, 0, 0), -1)
         cv2.rectangle(img, (cancel_x, func_y), (cancel_x + cancel_w, func_y + key_height), (150, 150, 150), 1)
-        cv2.putText(img, "取消", (cancel_x + 5, func_y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+        img = put_japanese_text(img, "取消", (cancel_x + 5, func_y + 25), 0.35, (255, 255, 255), 1)
         buttons['key_cancel'] = cancel_rect
         
         return img, buttons
