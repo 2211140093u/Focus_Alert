@@ -3,7 +3,6 @@ import numpy as np
 import os
 import json
 from pathlib import Path
-from virtual_keyboard import VirtualKeyboard
 from report_viewer import ReportViewer
 
 class MainMenu:
@@ -243,9 +242,7 @@ class DataViewer:
         self.height = height
         self.log_dir = log_dir
         self.selected_file = None
-        self.mode = 'list'  # 'list', 'view', 'edit'
-        self.keyboard = VirtualKeyboard(width=width, height=height)
-        self.original_note = ""  # 編集前のメモ
+        self.mode = 'list'  # 'list', 'view', 'report'
         self.report_viewer = ReportViewer(width=width, height=height)
         
     def get_log_files(self):
@@ -265,8 +262,6 @@ class DataViewer:
             return self._draw_list(img)
         elif self.mode == 'view':
             return self._draw_view(img)
-        elif self.mode == 'edit':
-            return self._draw_edit(img)
         elif self.mode == 'report':
             return self.report_viewer.draw()
         return img, []
@@ -325,145 +320,36 @@ class DataViewer:
                     mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M')
                     cv2.putText(img, f"Size: {size_kb:.1f}KB", (20, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
                     cv2.putText(img, f"Updated: {mtime_str}", (20, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
-                    
-                    # メモの表示（最新のメモを表示）
-                    note = self.get_all_notes()
-                    if note:
-                        note_preview = note[:30] + '...' if len(note) > 30 else note
-                        cv2.putText(img, f"Note: {note_preview}", (20, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (200, 200, 255), 1, cv2.LINE_AA)
                 except:
                     pass
         
         # 戻るボタン
-        back_rect = (10, self.height - 100, 80, self.height - 70)
-        cv2.rectangle(img, (10, self.height - 100), (80, self.height - 70), (100, 100, 100), -1)
-        cv2.rectangle(img, (10, self.height - 100), (80, self.height - 70), (255, 255, 255), 1)
-        cv2.putText(img, "Back", (15, self.height - 75), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+        back_rect = (10, self.height - 60, 80, self.height - 30)
+        cv2.rectangle(img, (10, self.height - 60), (80, self.height - 30), (100, 100, 100), -1)
+        cv2.rectangle(img, (10, self.height - 60), (80, self.height - 30), (255, 255, 255), 1)
+        cv2.putText(img, "Back", (15, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
         # レポート生成ボタン
-        report_rect = (self.width - 100, self.height - 100, self.width - 10, self.height - 70)
-        cv2.rectangle(img, (self.width - 100, self.height - 100), (self.width - 10, self.height - 70), (0, 150, 150), -1)
-        cv2.rectangle(img, (self.width - 100, self.height - 100), (self.width - 10, self.height - 70), (255, 255, 255), 1)
-        cv2.putText(img, "Report", (self.width - 95, self.height - 75), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-        
-        # メモ編集ボタン
-        edit_rect = (10, self.height - 60, 100, self.height - 30)
-        cv2.rectangle(img, (10, self.height - 60), (100, self.height - 30), (150, 150, 0), -1)
-        cv2.rectangle(img, (10, self.height - 60), (100, self.height - 30), (255, 255, 255), 1)
-        cv2.putText(img, "Edit Note", (15, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+        report_rect = (self.width - 100, self.height - 60, self.width - 10, self.height - 30)
+        cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (0, 150, 150), -1)
+        cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (255, 255, 255), 1)
+        cv2.putText(img, "Report", (self.width - 95, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
         
         # 削除ボタン
-        delete_rect = (self.width - 100, self.height - 60, self.width - 10, self.height - 30)
-        cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (150, 0, 0), -1)
-        cv2.rectangle(img, (self.width - 100, self.height - 60), (self.width - 10, self.height - 30), (255, 255, 255), 1)
-        cv2.putText(img, "Delete", (self.width - 85, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+        delete_rect = (90, self.height - 60, 160, self.height - 30)
+        cv2.rectangle(img, (90, self.height - 60), (160, self.height - 30), (150, 0, 0), -1)
+        cv2.rectangle(img, (90, self.height - 60), (160, self.height - 30), (255, 255, 255), 1)
+        cv2.putText(img, "Delete", (95, self.height - 35), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         
-        buttons = [('back', back_rect), ('report', report_rect), ('edit', edit_rect), ('delete', delete_rect)]
+        buttons = [('back', back_rect), ('report', report_rect), ('delete', delete_rect)]
         return img, buttons
-    
-    def _draw_edit(self, img):
-        """メモ編集画面を描画（仮想キーボード付き）"""
-        # 仮想キーボードを描画
-        kb_img, kb_buttons = self.keyboard.draw()
-        
-        # ファイル名表示
-        if self.selected_file:
-            file_text = f"File: {self.selected_file[:20]}"
-            cv2.putText(kb_img, file_text, (10, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (200, 200, 200), 1, cv2.LINE_AA)
-        
-        return kb_img, kb_buttons
-    
-    def load_note_from_file(self):
-        """ファイルからメモを読み込み（最新のメモを返す）"""
-        return self.get_all_notes()
-    
-    def save_note_to_file(self, note_text):
-        """メモをファイルに保存（CSVにイベントとして追加）"""
-        if not self.selected_file:
-            return False
-        
-        filepath = os.path.join(self.log_dir, self.selected_file)
-        if not os.path.exists(filepath):
-            return False
-        
-        try:
-            import csv
-            import time
-            
-            # 空のメモの場合は保存しない
-            if not note_text.strip():
-                return True
-            
-            # 新しいメモを追加（既存のメモは保持）
-            with open(filepath, 'a', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                # CSVのヘッダーに合わせて記録
-                # メタ情報は既存のファイルから取得できないため、Noneで記録
-                writer.writerow([
-                    time.time(), 'event',
-                    None, None, None, None, None,  # session, participant, task, phase, block_id
-                    None, None, None, None, None, None,  # ear関連
-                    None, None, None, None, None, None, None,  # gaze関連
-                    None, None, 'note', note_text
-                ])
-            return True
-        except Exception as e:
-            print(f"Error saving note: {e}")
-            return False
-    
-    def get_all_notes(self):
-        """ファイルからすべてのメモを取得（最新のものを返す）"""
-        if not self.selected_file:
-            return ""
-        
-        filepath = os.path.join(self.log_dir, self.selected_file)
-        if not os.path.exists(filepath):
-            return ""
-        
-        try:
-            import csv
-            notes = []
-            with open(filepath, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if row.get('row_type') == 'event' and row.get('event') == 'note':
-                        note_text = row.get('info', '')
-                        if note_text:
-                            notes.append(note_text)
-            
-            # 最新のメモを返す（複数ある場合は結合）
-            if notes:
-                return '\n'.join(notes)
-            return ""
-        except Exception as e:
-            print(f"Error loading notes: {e}")
-            return ""
     
     def handle_click(self, x, y, buttons):
         """クリック処理"""
-        # メモ編集モードの場合、キーボードのクリック処理
-        if self.mode == 'edit':
-            result = self.keyboard.handle_click(x, y, buttons)
-            if result == 'ok':
-                # メモを保存
-                note_text = self.keyboard.get_text()
-                if self.save_note_to_file(note_text):
-                    self.mode = 'view'
-                    return 'note_saved'
-                else:
-                    return 'note_error'
-            elif result == 'cancel':
-                # 編集をキャンセル
-                self.keyboard.set_text(self.original_note)
-                self.mode = 'view'
-                return None
-            return None
-        
-        # 通常のクリック処理
         for name, (x1, y1, x2, y2) in buttons:
             if x1 <= x <= x2 and y1 <= y <= y2:
                 if name == 'back':
-                    if self.mode == 'view' or self.mode == 'edit' or self.mode == 'report':
+                    if self.mode == 'view' or self.mode == 'report':
                         if self.mode == 'report':
                             self.mode = 'view'
                         else:
@@ -479,12 +365,6 @@ class DataViewer:
                             self.report_viewer.prev_page()
                         else:
                             self.report_viewer.next_page()
-                    return None
-                elif name == 'edit':
-                    # メモ編集モードに移行
-                    self.original_note = self.load_note_from_file()
-                    self.keyboard.set_text(self.original_note)
-                    self.mode = 'edit'
                     return None
                 elif name == 'delete':
                     return 'delete'
