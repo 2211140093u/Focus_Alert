@@ -29,12 +29,16 @@ def main():
 
     picam = Picamera2()
     
-    # 【変更点1】 formatを "BGR888" に指定します
-    # これにより、カメラから直接 OpenCV が好む BGR 形式でデータが来ます
+    # ストリームの設定（size, format のみ。ここに fps は入れない）
+    # あえて RGB888 で取得（こちらの方が内部的に安定することがある）
     config = picam.create_preview_configuration(
-    main={"size": (args.width, args.height), "format": "BGR888", "fps": args.fps}
+main={"size": (args.width, args.height), "format": "RGB888"}
     )
     picam.configure(config)
+
+    # カメラ全体の設定（ここで fps を指定する）
+    picam.set_controls({"FrameRate": args.fps})
+
     picam.start()
 
     t_prev = time.time()
@@ -42,11 +46,14 @@ def main():
 
     try:
         while True:
-            # 取得される arr は既に BGR 形式です
+            # NumPy配列として取得（この時点では RGB 順）
             arr = picam.capture_array()
 
-            # 【変更点2】 cv2.cvtColor は不要なので削除しました
-            # そのままエンコードします
+            # 【重要】RGB から BGR へ変換
+            # OpenCVのimencodeは「BGR」の並びを想定してJPEGを作るため、ここでの変換が不可欠です
+            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            
+            # エンコードして送信
             ok, enc = cv2.imencode('.jpg', arr, encode_param)
             
             if not ok:
