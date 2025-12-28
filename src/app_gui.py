@@ -104,13 +104,15 @@ def run_measurement(args, settings=None, rotate_display=False):
         display_height = args.display_height
     
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(win_name, display_width, display_height)
-    # フルスクリーンモード（環境変数で制御可能）
+    # フルスクリーンモードを先に設定（resizeWindowの前に）
     if args.backend == 'zmq' and os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
         try:
             cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         except Exception as e:
             print(f"Warning: Could not set fullscreen mode: {e}")
+    # フルスクリーンでない場合のみリサイズ
+    if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') != '1':
+        cv2.resizeWindow(win_name, display_width, display_height)
     
     frame_failure_count = 0
     max_failures = 30
@@ -200,10 +202,7 @@ def run_measurement(args, settings=None, rotate_display=False):
                     int(y2 * scale + y_offset)
                 )
         
-        # 回転表示の場合、フレームを90度時計回りに回転
-        if rotate_display:
-            vis_display = cv2.rotate(vis_display, cv2.ROTATE_90_CLOCKWISE)
-        
+        # 回転表示は無効化
         cv2.imshow(win_name, vis_display)
         cv2.setMouseCallback(win_name, on_mouse)
         key = cv2.waitKey(1) & 0xFF
@@ -275,7 +274,8 @@ def main_gui():
     parser.add_argument('--height', type=int, default=480)
     parser.add_argument('--display-width', type=int, default=320)
     parser.add_argument('--display-height', type=int, default=480)
-    parser.add_argument('--rotate-display', action='store_true', help='Display rotated 90 degrees clockwise (for landscape monitors)')
+    # 回転表示は無効化（問題が多いため）
+    # parser.add_argument('--rotate-display', action='store_true', help='Display rotated 90 degrees clockwise (for landscape monitors)')
     parser.add_argument('--backend', type=str, default='zmq', choices=['auto','opencv','picamera2','zmq'])
     parser.add_argument('--zmq-url', type=str, default='tcp://127.0.0.1:5555', help='ZMQ URL for camera proxy')
     parser.add_argument('--zmq-topic', type=str, default='frame', help='ZMQ topic for camera proxy')
@@ -283,9 +283,11 @@ def main_gui():
     parser.add_argument('--config-dir', type=str, default='config')
     args = parser.parse_args()
     
-    # 回転表示の場合、表示サイズを入れ替え
-    if args.rotate_display:
-        args.display_width, args.display_height = args.display_height, args.display_width
+    # 回転表示は一旦無効化（問題が多いため）
+    # 横長モニタ（480x320）で縦長アプリ（320x480）を表示する場合は、
+    # モニタを物理的に回転させるか、X11の設定で回転させることを推奨
+    # if args.rotate_display:
+    #     args.display_width, args.display_height = args.display_height, args.display_width
     
     # 設定の読み込み
     settings_path = os.path.join(args.config_dir, 'settings.json')
@@ -300,42 +302,21 @@ def main_gui():
     
     win_name = 'Focus Alert - Main Menu'
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(win_name, args.display_width, args.display_height)
-    # フルスクリーンモード（環境変数で制御可能）
+    # フルスクリーンモードを先に設定（resizeWindowの前に）
     if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
         try:
             cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         except Exception as e:
             print(f"Warning: Could not set fullscreen mode: {e}")
+    # フルスクリーンでない場合のみリサイズ
+    if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') != '1':
+        cv2.resizeWindow(win_name, args.display_width, args.display_height)
     
     last_click = {'x': None, 'y': None, 'ts': 0}
     current_screen = 'main'  # 'main', 'measure', 'data', 'options'
     
-    def rotate_coordinates_back(x, y, orig_width, orig_height):
-        """回転後の座標を元の座標に変換（90度時計回りの逆変換）
-        
-        横長（480x320）を時計回りに回転して縦長（320x480）にした場合：
-        - 横長の左側 → 縦長の上側
-        - 横長の上側 → 縦長の右側
-        - 横長の右側 → 縦長の下側
-        - 横長の下側 → 縦長の左側
-        
-        座標変換: (x', y') -> (orig_height - y', x')
-        """
-        # 回転後の座標(x', y')から元の座標(x, y)への変換
-        # 90度時計回り: (x, y) -> (y, orig_width - x)
-        # 逆変換: (x', y') -> (orig_height - y', x')
-        return (orig_height - y, x)
-    
     def on_mouse(event, x, y, flags, param):
-        # 回転表示の場合、座標を元の座標系に変換
-        # 回転後は表示サイズが入れ替わっているので、元のサイズで変換
-        if args.rotate_display:
-            # 元のサイズ（320x480）で変換
-            orig_width = args.display_height  # 回転後は入れ替わっているので
-            orig_height = args.display_width
-            x, y = rotate_coordinates_back(x, y, orig_width, orig_height)
-        
+        # 回転表示は無効化
         if event == cv2.EVENT_LBUTTONDOWN:
             last_click['x'] = x
             last_click['y'] = y
@@ -350,9 +331,7 @@ def main_gui():
     while True:
         if current_screen == 'main':
             img, buttons = main_menu.draw()
-            # 回転表示の場合、フレームを90度時計回りに回転
-            if args.rotate_display:
-                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            # 回転表示は無効化
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:
@@ -398,23 +377,23 @@ def main_gui():
                 ear_threshold_ratio=options_menu.settings.get('ear_threshold_ratio', 0.90),
                 ear_baseline_init=options_menu.settings.get('ear_baseline_init', 0.45),
             )
-            run_measurement(measure_args, settings=options_menu.settings, rotate_display=args.rotate_display)
+            run_measurement(measure_args, settings=options_menu.settings, rotate_display=False)
             current_screen = 'main'
             cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(win_name, args.display_width, args.display_height)
-            # フルスクリーンモード（環境変数で制御可能）
+            # フルスクリーンモードを先に設定（resizeWindowの前に）
             if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') == '1':
                 try:
                     cv2.setWindowProperty(win_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 except Exception as e:
                     print(f"Warning: Could not set fullscreen mode: {e}")
+            # フルスクリーンでない場合のみリサイズ
+            if os.environ.get('FOCUS_ALERT_FULLSCREEN', '1') != '1':
+                cv2.resizeWindow(win_name, args.display_width, args.display_height)
             cv2.setMouseCallback(win_name, on_mouse)
         
         elif current_screen == 'data':
             img, buttons = data_viewer.draw()
-            # 回転表示の場合、フレームを90度時計回りに回転
-            if args.rotate_display:
-                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            # 回転表示は無効化
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:
@@ -466,9 +445,7 @@ def main_gui():
         
         elif current_screen == 'options':
             img, buttons = options_menu.draw()
-            # 回転表示の場合、フレームを90度時計回りに回転
-            if args.rotate_display:
-                img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            # 回転表示は無効化
             cv2.imshow(win_name, img)
             
             if last_click['x'] is not None:

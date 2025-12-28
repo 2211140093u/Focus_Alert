@@ -74,9 +74,11 @@ PROXY_LOG="$APP_LOG_DIR/cam_proxy_${TIMESTAMP}.log"
   fi
   echo "[cam_proxy] Starting camera proxy..."
   # システムPythonを直接実行
+  # カメラを180度回転（上下反転を修正）
   exec "$SYSTEM_PYTHON3" "$PROJ_DIR/scripts/cam_proxy.py" \
     --url "$URL" --topic "$TOPIC" \
-    --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY"
+    --width "$WIDTH" --height "$HEIGHT" --fps "$FPS" --quality "$QUALITY" \
+    --rotate 180
 ) &
 PROXY_PID=$!
 echo "[launcher] cam_proxy started pid=$PROXY_PID (log: $PROXY_LOG)"
@@ -111,7 +113,6 @@ APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" \
     --display-width 320 --display-height 480 \
-    --rotate-display \
     --log-dir "$APP_LOG_DIR" \
     --config-dir "$PROJ_DIR/config"
 ) &
