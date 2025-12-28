@@ -20,6 +20,7 @@ def main():
     ap.add_argument('--height', type=int, default=480)
     ap.add_argument('--fps', type=int, default=30)
     ap.add_argument('--quality', type=int, default=85)
+    ap.add_argument('--rotate', type=int, default=180, choices=[0, 90, 180, 270], help='Camera rotation in degrees')
     args = ap.parse_args()
 
     ctx = zmq.Context.instance()
@@ -31,9 +32,25 @@ def main():
     
     # ストリームの設定（size, format のみ。ここに fps は入れない）
     # あえて RGB888 で取得（こちらの方が内部的に安定することがある）
-    config = picam.create_preview_configuration(
-main={"size": (args.width, args.height), "format": "RGB888"}
-    )
+    # カメラの回転設定を追加
+    try:
+        from picamera2 import Transform
+        transform = 0
+        if args.rotate == 90:
+            transform = Transform.ROT90
+        elif args.rotate == 180:
+            transform = Transform.ROT180
+        elif args.rotate == 270:
+            transform = Transform.ROT270
+        config = picam.create_preview_configuration(
+            main={"size": (args.width, args.height), "format": "RGB888"},
+            transform=transform
+        )
+    except Exception:
+        # Transformが使えない場合は通常の設定
+        config = picam.create_preview_configuration(
+            main={"size": (args.width, args.height), "format": "RGB888"}
+        )
     picam.configure(config)
 
     # カメラ全体の設定（ここで fps を指定する）
@@ -53,8 +70,8 @@ main={"size": (args.width, args.height), "format": "RGB888"}
             # OpenCVのimencodeは「BGR」の並びを想定してJPEGを作るため、ここでの変換が不可欠です
             frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
             
-            # エンコードして送信
-            ok, enc = cv2.imencode('.jpg', arr, encode_param)
+            # エンコードして送信（BGR形式でエンコード）
+            ok, enc = cv2.imencode('.jpg', frame_bgr, encode_param)
             
             if not ok:
                 continue
