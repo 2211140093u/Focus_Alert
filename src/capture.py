@@ -194,22 +194,22 @@ class Camera:
 
     def open(self):
         try:
-            if self.backend == 'zmq':
-                self.impl = _ZmqCamera(url=self.zmq_url, topic=self.zmq_topic).open()
-                return self
-            if self.backend in ('picamera2', 'auto'):
-                try:
-                    self.impl = _PiCamera2Camera(width=self.width, height=self.height, fps=self.fps,
-                                                 rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
-                    return self
-                except Exception as e:
-                    if self.backend == 'picamera2':
-                        raise
-                    print(f"Warning: Picamera2 failed, falling back to OpenCV: {e}")
-            # 最後の手段として OpenCV カメラにフォールバック
-            self.impl = _OpenCVCamera(index=self.index, width=self.width, height=self.height, fps=self.fps,
-                                       rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+        if self.backend == 'zmq':
+            self.impl = _ZmqCamera(url=self.zmq_url, topic=self.zmq_topic).open()
             return self
+        if self.backend in ('picamera2', 'auto'):
+            try:
+                self.impl = _PiCamera2Camera(width=self.width, height=self.height, fps=self.fps,
+                                             rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+                return self
+                except Exception as e:
+                if self.backend == 'picamera2':
+                    raise
+                    print(f"Warning: Picamera2 failed, falling back to OpenCV: {e}")
+        # 最後の手段として OpenCV カメラにフォールバック
+        self.impl = _OpenCVCamera(index=self.index, width=self.width, height=self.height, fps=self.fps,
+                                   rotate=self.rotate, flip_h=self.flip_h, flip_v=self.flip_v).open()
+        return self
         except Exception as e:
             print(f"Error opening camera: {e}")
             raise
@@ -243,7 +243,7 @@ class Camera:
     def release(self):
         if self.impl is not None:
             try:
-                self.impl.release()
+            self.impl.release()
             except Exception as e:
                 print(f"Error releasing camera: {e}")
             finally:

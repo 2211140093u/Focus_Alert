@@ -11,7 +11,7 @@ import seaborn as sns
 sns.set_context("talk")
 
 
-def b64_png(fig, dpi=120):
+def b64_png(fig, dpi=200):
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(fig)
@@ -63,8 +63,9 @@ def load_log(path: str):
     return frames, events
 
 
-def figure_timeseries(frames: pd.DataFrame, title: str):
-    fig, axes = plt.subplots(3, 1, figsize=(14, 9), sharex=True)
+def figure_timeseries(frames: pd.DataFrame, title: str, dpi=200):
+    # dpiを高く設定して高解像度で生成（拡大時も綺麗に表示）
+    fig, axes = plt.subplots(3, 1, figsize=(14, 9), sharex=True, dpi=dpi)
     t = frames["ts"].values
     # リスク
     axes[0].plot(t, frames["risk"], label="Risk", color="#1f77b4")
@@ -237,47 +238,20 @@ def save_report_images(sections, image_dir, html_path):
             pil_img = Image.open(io.BytesIO(img_data))
             img_array = np.array(pil_img)
             
-            # 時系列グラフ（最初の画像）の場合、3つのサブプロットに分割
-            if img_idx == 0 and image_types[0] in img_title_base:
-                # 時系列グラフを3つに分割
-                img_h, img_w = img_array.shape[:2]
-                subplot_h = img_h // 3
-                
-                subplot_titles = ['Risk', 'EAR', 'Gaze']
-                for sub_idx in range(3):
-                    y_start = sub_idx * subplot_h
-                    y_end = (sub_idx + 1) * subplot_h if sub_idx < 2 else img_h
-                    subplot_img = img_array[y_start:y_end, :]
-                    
-                    # 画像ファイル名
-                    img_filename = f"{report_base_name}_p{len(pages)}.png"
-                    img_path = os.path.join(image_dir, img_filename)
-                    
-                    # 保存
-                    subplot_pil = Image.fromarray(subplot_img)
-                    subplot_pil.save(img_path)
-                    
-                    # 相対パスで保存
-                    rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
-                    pages.append({
-                        'type': 'image',
-                        'title': f"{img_title_base} - {subplot_titles[sub_idx]}",
-                        'path': rel_path
-                    })
-            else:
-                # 通常の画像はそのまま保存
-                img_filename = f"{report_base_name}_p{len(pages)}.png"
-                img_path = os.path.join(image_dir, img_filename)
-                
-                pil_img.save(img_path)
-                
-                # 相対パスで保存
-                rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
-                pages.append({
-                    'type': 'image',
-                    'title': img_title_base,
-                    'path': rel_path
-                })
+            # 時系列グラフ（最初の画像）は分割せず、1枚の画像として保存
+            # 通常の画像はそのまま保存
+            img_filename = f"{report_base_name}_p{len(pages)}.png"
+            img_path = os.path.join(image_dir, img_filename)
+            
+            pil_img.save(img_path)
+            
+            # 相対パスで保存
+            rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
+            pages.append({
+                'type': 'image',
+                'title': img_title_base,
+                'path': rel_path
+            })
         except Exception as e:
             print(f"Error saving image {img_idx}: {e}")
             import traceback
@@ -347,9 +321,9 @@ def main():
         except Exception:
             meta_row = {}
         sess_title = f"{Path(lp).name}"
-        # 図表の生成
-        ts_fig = figure_timeseries(frames, title=sess_title)
-        ts_b64 = b64_png(ts_fig)
+        # 図表の生成（高解像度で生成：dpi=200）
+        ts_fig = figure_timeseries(frames, title=sess_title, dpi=200)
+        ts_b64 = b64_png(ts_fig, dpi=200)
         hist_fig = figure_histograms(frames, title=sess_title)
         hist_b64 = b64_png(hist_fig)
         # 視線の2次元表示

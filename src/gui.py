@@ -535,6 +535,13 @@ class DataViewer:
                     self.selected_file = filename
                     self.mode = 'view'
                     return None
+                elif self.mode == 'report':
+                    # レポートモードの場合、ズームボタンなどの処理をreport_viewerに委譲
+                    result = self.report_viewer.handle_click(x, y, buttons)
+                    if result == 'back':
+                        self.mode = 'view'
+                        return None
+                    return None
         return None
     
     def delete_file(self):

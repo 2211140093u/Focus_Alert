@@ -46,7 +46,7 @@ if [ ! -x "$SYSTEM_PYTHON3" ]; then
         SYSTEM_PYTHON3="/usr/bin/python3.11"
     else
         echo "System python3 not found. Please install system python." >&2
-        exit 1
+  exit 1
     fi
 fi
 
