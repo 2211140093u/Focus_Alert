@@ -10,98 +10,60 @@ class Overlay:
         h, w = vis.shape[:2]
         
         if landscape_mode:
-            # 横長画面（480x320）向け：左側にカメラ映像、右側に情報パネル
-            # カメラ映像を左側に配置（縦長でトリミング、縦横比を維持）
+            # --- 横長画面（480x320）向け最適化 ---
+            panel_w = 180  # パネル幅を広げて、数値のはみ出しを防止
+            info_panel_h = 200 # 高さをボタンに被らない程度に調整
+            
+            # 1. カメラ映像エリアの計算（アスペクト比を絶対に崩さない）
+            cam_w_max = w - panel_w - 15  # 15pxはマージン
+            cam_h_max = h
+            
             frame_h, frame_w = frame.shape[:2]
-            frame_aspect = frame_w / frame_h if frame_h > 0 else 1.0
+            # カメラ映像を cam_w_max x cam_h_max に収まるようにリサイズ
+            scale = min(cam_w_max / frame_w, cam_h_max / frame_h)
+            cam_w = int(frame_w * scale)
+            cam_h = int(frame_h * scale)
             
-            # 左側のカメラ映像エリアの幅を決定（右側に170pxのパネルを確保）
-            cam_w_max = w - 170 - 10  # 右側パネル（170px）+ 余白（10px）
-            # 縦幅を増やして縦横比を修正（画面の高さより少し大きくする）
-            cam_h = int(h * 1.1)  # 縦幅を10%増やす（画面からはみ出すが、縦横比を修正）
+            frame_resized = cv2.resize(frame, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
             
-            # 縦横比を維持して、縦長でトリミングする
-            # 元のフレームの中央部分を縦長で切り出す
-            if frame_aspect > 1.0:
-                # 横長のフレームの場合、中央部分を縦長で切り出す
-                target_aspect = cam_w_max / cam_h  # 目標の縦横比
-                if frame_aspect > target_aspect:
-                    # フレームが横長すぎる場合、中央部分を切り出す
-                    crop_w = int(frame_h * target_aspect)
-                    crop_x = (frame_w - crop_w) // 2
-                    frame_cropped = frame[:, crop_x:crop_x+crop_w]
-                else:
-                    frame_cropped = frame
-            else:
-                # 縦長のフレームの場合、そのまま使用
-                frame_cropped = frame
-            
-            # 切り出したフレームをリサイズ（縦横比を維持）
-            crop_h, crop_w = frame_cropped.shape[:2]
-            scale = min(cam_w_max / crop_w, cam_h / crop_h)
-            cam_w = int(crop_w * scale)
-            cam_h = int(crop_h * scale)
-            
-            # 画面内に収まるように調整（縦方向は中央配置、横方向は左端）
-            if cam_h > h:
-                cam_h = h  # 画面の高さに制限
-                # 縦横比を維持して幅を再計算
-                cam_w = int(cam_h * (crop_w / crop_h))
-            
-            frame_resized = cv2.resize(frame_cropped, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
-            
-            # 左側に配置
-            cam_x = 0
-            cam_y = (h - cam_h) // 2  # 縦方向中央配置
-            
+            # 背景作成（真っ黒）
             vis = np.zeros((h, w, 3), dtype=np.uint8)
-            vis.fill(20)  # 暗い背景
-            vis[cam_y:cam_y+cam_h, cam_x:cam_x+cam_w] = frame_resized
+            vis.fill(10)
             
-            # 右側に情報パネル（170x320の領域）
-            # 数値表示は右上、ボタンは右下に配置するため、パネルを2つに分ける
-            panel_w = 170  # 横幅を少し広げて数値がはみ出ないように
-            # 数値表示パネル（右上）
-            info_panel_h = 220  # 数値表示用の高さを少し増やす
-            info_panel_x = w - panel_w - 10
-            info_panel_y = 10
-            # ボタンエリア（右下）は draw_buttons で処理
+            # 映像を左側に配置
+            cam_y = (h - cam_h) // 2
+            vis[cam_y:cam_y+cam_h, 0:cam_w] = frame_resized
+            
+            # 右側の情報パネル位置
+            panel_x = w - panel_w - 5
+            panel_y = 5
+            panel_h = info_panel_h
         else:
-            # 縦長画面（320×480）向け：従来のレイアウト
+            # 縦長モードは現状維持
             panel_w = min(300, w - 20)
             panel_h = 140
             panel_x = 10
             panel_y = 10
-        
-        # 半透明の背景（横長モードでは右上の情報パネル）
+
+        # --- パネルの描画（半透明） ---
         overlay_bg = vis.copy()
-        if landscape_mode:
-            # 右上の情報パネル
-            cv2.rectangle(overlay_bg, (info_panel_x, info_panel_y), (info_panel_x + panel_w, info_panel_y + info_panel_h), (0,0,0), -1)
-            vis = cv2.addWeighted(vis, 0.2, overlay_bg, 0.8, 0)
-            cv2.rectangle(vis, (info_panel_x, info_panel_y), (info_panel_x + panel_w, info_panel_y + info_panel_h), (255,255,255), 1)
-            panel_x = info_panel_x
-            panel_y = info_panel_y
-            panel_h = info_panel_h
-        else:
-            # 縦長モードでは従来通り
-            cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
-            vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
-            cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
-        
-        # フォントサイズ（横長モードでは大きめ、ただし数値がはみ出ないように少し小さめに）
-        font_scale = 0.52 if landscape_mode else 0.4
-        font_thickness = 2 if landscape_mode else 1
-        line_height = 28 if landscape_mode else 18  # 縦幅を少し増やす
-        y = panel_y + 15  # 上端の余白を少し減らす
+        cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
+        vis = cv2.addWeighted(vis, 0.4, overlay_bg, 0.6, 0) # 背景を少し濃くして視認性アップ
+        cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (200,200,200), 1)
+
+        # --- テキスト描画設定（引き伸ばし感をなくす） ---
+        # landscape_modeでもfont_scaleを欲張らず、正確な表示を優先
+        font_scale = 0.45 if landscape_mode else 0.4
+        font_thickness = 1 
+        line_height = 24 if landscape_mode else 18
+        curr_y = panel_y + 20
         
         def put(t, color=(255,255,255)):
-            nonlocal y
-            # 数値欄は省略せず、できるだけそのまま表示する
-            # （パネル幅を超えた分は画面側でクリップされる）
-            cv2.putText(vis, t, (panel_x + 5, y), cv2.FONT_HERSHEY_SIMPLEX, 
+            nonlocal curr_y
+            # テキストの描画（panel_xからの余白を少し増やす）
+            cv2.putText(vis, t, (panel_x + 8, curr_y), cv2.FONT_HERSHEY_SIMPLEX, 
                        font_scale, color, font_thickness, cv2.LINE_AA)
-            y += line_height
+            curr_y += line_height
         
         # カメラ状態表示（リアルタイム確認用）
         if cam_status is not None:
@@ -174,65 +136,60 @@ class Overlay:
         return vis
 
     def draw_buttons(self, frame, states=None, landscape_mode=False):
-        # 横長画面（480x320）向けに最適化されたタッチUIボタン
-        # 返り値は辞書: 名前 -> (x1,y1,x2,y2)
         vis = frame
         h, w = vis.shape[:2]
         
         if landscape_mode:
-            # 横長モード：右側パネルに縦に並べる（全ボタン表示）
+            # --- 横長モードの設定 ---
+            panel_w = 180 
+            panel_x = w - panel_w - 5
+            btn_w = panel_w - 20
+            btn_h = 35  # 高さを少し抑えてスリムに
+            pad = 4     # ボタン間の隙間
+            
             labels = [
-                ('start', 'Start'),
-                ('end', 'Stop'),
-                ('marker', 'Mark'),
-                ('distract', 'Dist'),
-                ('calib', 'Calib'),
-                ('quit', 'Quit'),
+                ('start', 'START'), ('end', 'STOP'),
+                ('marker', 'MARK'), ('distract', 'DIST'),
+                ('calib', 'CALIB'), ('quit', 'QUIT'),
             ]
             
-            # 右側パネルに縦に配置（右下に配置）
-            panel_w = 170  # 数値欄と同じ幅に統一
-            panel_x = w - panel_w - 10
-            pad = 5
-            btn_w = panel_w - 20
-            btn_h = 45  # ボタン高さを少し大きくしてタッチしやすく
-            # 右下から配置
-            total_btn_height = len(labels) * (btn_h + pad) + pad
-            y_start = h - total_btn_height
-            
+            # 配置の開始基準位置（画面の一番下から少し上にマージン）
+            y_offset = h - 8
             rects = {}
-            for idx, (key, text) in enumerate(labels):
-                y1 = y_start + pad + idx * (btn_h + pad)
+
+            # 逆順（reversed）で回すことで、リストの上が一番上に来るように配置
+            for key, text in reversed(labels):
+                # ボタンの四隅を計算
+                y2 = y_offset
+                y1 = y2 - btn_h
                 x1 = panel_x + 10
                 x2 = x1 + btn_w
-                y2 = y1 + btn_h
                 
-                # ボタンの状態に応じた色
+                # ボタンの色設定
                 color = (60, 60, 60)
-                active = False
-                if states and key == 'distract':
-                    active = bool(states.get('distract_on', False))
-                if active:
-                    color = (0, 120, 255)
+                if states and key == 'distract' and states.get('distract_on', False):
+                    color = (0, 120, 255) # アクティブ時
                 elif key == 'quit':
-                    color = (120, 60, 60)  # Quitボタンは赤系
-                elif key == 'end':
-                    color = (60, 120, 60)  # Stopボタンは緑系
+                    color = (50, 50, 150) # 終了ボタン
                 
-                # ボタンの描画
-                cv2.rectangle(vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
-                cv2.rectangle(vis, (x1+2, y1+2), (x2-2, y2-2), color, -1)
+                # ボタン（枠と塗りつぶし）の描画
+                cv2.rectangle(vis, (x1, y1), (x2, y2), (255, 255, 255), 1) # 枠
+                cv2.rectangle(vis, (x1+1, y1+1), (x2-1, y2-1), color, -1)  # 中
                 
-                # テキストの中央配置（大きく）
-                font_scale = 0.7
-                font_thickness = 2
-                text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
-                text_x = x1 + (btn_w - text_size[0]) // 2
-                text_y = y1 + (btn_h + text_size[1]) // 2
-                cv2.putText(vis, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 
+                # テキストの描画
+                font_scale = 0.5  # 引き伸ばし感を防ぐために小さめに設定
+                font_thickness = 1
+                t_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+                tx = x1 + (btn_w - t_size[0]) // 2
+                ty = y1 + (btn_h + t_size[1]) // 2
+                cv2.putText(vis, text, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 
                            font_scale, (255, 255, 255), font_thickness, cv2.LINE_AA)
                 
+                # クリック判定用の座標を保存
                 rects[key] = (x1, y1, x2, y2)
+                
+                # 次のボタンのために基準位置を上にずらす
+                y_offset -= (btn_h + pad)
             
             return rects
         
