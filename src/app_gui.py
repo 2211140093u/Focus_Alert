@@ -91,11 +91,11 @@ def run_measurement(args, settings=None, rotate_display=False):
             last_click['y'] = y
             last_click['ts'] = time.time()
     
-    # 表示解像度
+    # 表示解像度（横長画面480x320）
     if args.display_width is None or args.display_height is None:
         if args.backend == 'zmq':
-            display_width = args.display_width if args.display_width else 320
-            display_height = args.display_height if args.display_height else 480
+            display_width = args.display_width if args.display_width else 480
+            display_height = args.display_height if args.display_height else 320
         else:
             display_width = args.display_width if args.display_width else args.width
             display_height = args.display_height if args.display_height else args.height
@@ -168,9 +168,12 @@ def run_measurement(args, settings=None, rotate_display=False):
             'consecutive_failures': cam_status_dict.get('consecutive_failures', 0),
         }
         
+        # 横長モード判定（480x320）
+        landscape_mode = (display_width == 480 and display_height == 320)
+        
         vis = overlay.draw(frame, feats, score, alert, fps, status=status, 
-                          show_alert_text=alert_enabled, cam_status=cam_status)
-        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on})
+                          show_alert_text=alert_enabled, cam_status=cam_status, landscape_mode=landscape_mode)
+        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on}, landscape_mode=landscape_mode)
         
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
@@ -272,8 +275,8 @@ def main_gui():
     parser.add_argument('--cam', type=int, default=0)
     parser.add_argument('--width', type=int, default=640)
     parser.add_argument('--height', type=int, default=480)
-    parser.add_argument('--display-width', type=int, default=320)
-    parser.add_argument('--display-height', type=int, default=480)
+    parser.add_argument('--display-width', type=int, default=480)
+    parser.add_argument('--display-height', type=int, default=320)
     # 回転表示は無効化（問題が多いため）
     # parser.add_argument('--rotate-display', action='store_true', help='Display rotated 90 degrees clockwise (for landscape monitors)')
     parser.add_argument('--backend', type=str, default='zmq', choices=['auto','opencv','picamera2','zmq'])
