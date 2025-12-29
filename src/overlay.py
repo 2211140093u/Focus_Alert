@@ -15,8 +15,8 @@ class Overlay:
             frame_h, frame_w = frame.shape[:2]
             frame_aspect = frame_w / frame_h if frame_h > 0 else 1.0
             
-            # 左側のカメラ映像エリアの幅を決定（右側に160pxのパネルを確保）
-            cam_w_max = w - 160 - 10  # 右側パネル（160px）+ 余白（10px）
+            # 左側のカメラ映像エリアの幅を決定（右側に170pxのパネルを確保）
+            cam_w_max = w - 170 - 10  # 右側パネル（170px）+ 余白（10px）
             # 縦幅を増やして縦横比を修正（画面の高さより少し大きくする）
             cam_h = int(h * 1.1)  # 縦幅を10%増やす（画面からはみ出すが、縦横比を修正）
             
@@ -58,11 +58,11 @@ class Overlay:
             vis.fill(20)  # 暗い背景
             vis[cam_y:cam_y+cam_h, cam_x:cam_x+cam_w] = frame_resized
             
-            # 右側に情報パネル（160x320の領域）
+            # 右側に情報パネル（170x320の領域）
             # 数値表示は右上、ボタンは右下に配置するため、パネルを2つに分ける
-            panel_w = 160
+            panel_w = 170  # 横幅を少し広げて数値がはみ出ないように
             # 数値表示パネル（右上）
-            info_panel_h = 200  # 数値表示用の高さ
+            info_panel_h = 220  # 数値表示用の高さを少し増やす
             info_panel_x = w - panel_w - 10
             info_panel_y = 10
             # ボタンエリア（右下）は draw_buttons で処理
@@ -89,10 +89,10 @@ class Overlay:
             vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
             cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
         
-        # フォントサイズ（横長モードでは大きめ）
-        font_scale = 0.55 if landscape_mode else 0.4
+        # フォントサイズ（横長モードでは大きめ、ただし数値がはみ出ないように少し小さめに）
+        font_scale = 0.52 if landscape_mode else 0.4
         font_thickness = 2 if landscape_mode else 1
-        line_height = 26 if landscape_mode else 18
+        line_height = 28 if landscape_mode else 18  # 縦幅を少し増やす
         y = panel_y + 15  # 上端の余白を少し減らす
         
         def put(t, color=(255,255,255)):
@@ -191,11 +191,11 @@ class Overlay:
             ]
             
             # 右側パネルに縦に配置（右下に配置）
-            panel_w = 160
+            panel_w = 170  # 数値欄と同じ幅に統一
             panel_x = w - panel_w - 10
             pad = 5
             btn_w = panel_w - 20
-            btn_h = 40  # ボタン高さを少し小さくして6個収める
+            btn_h = 45  # ボタン高さを少し大きくしてタッチしやすく
             # 右下から配置
             total_btn_height = len(labels) * (btn_h + pad) + pad
             y_start = h - total_btn_height
