@@ -129,6 +129,17 @@ class ReportViewer:
                 print(f"Image not found: {image_path}")
                 print(f"Report dir: {self.report_dir}")
                 print(f"Original path: {page_info.get('path', '')}")
+                # 別のパスパターンも試す
+                alt_paths = [
+                    os.path.join(os.path.dirname(self.report_dir), image_path) if os.path.isabs(self.report_dir) else None,
+                    os.path.join(os.getcwd(), 'reports', os.path.basename(image_path)),
+                    os.path.join(os.getcwd(), image_path),
+                ]
+                for alt_path in alt_paths:
+                    if alt_path and os.path.exists(alt_path):
+                        print(f"Found image at alternative path: {alt_path}")
+                        image_path = alt_path
+                        break
             
             if os.path.exists(image_path):
                 try:
