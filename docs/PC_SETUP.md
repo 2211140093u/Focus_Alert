@@ -68,31 +68,55 @@ v4l2-ctl --list-devices
 
 ### 5. アプリケーションの起動
 
-#### 基本的な起動（ログなし）
+#### 方法1: 起動スクリプトを使用（推奨）
+
+**Windows:**
+- `scripts\start_focus_alert_pc.bat` をダブルクリック
+
+**Mac/Linux:**
+```bash
+chmod +x scripts/start_focus_alert_pc.sh
+./scripts/start_focus_alert_pc.sh
+```
+
+起動スクリプトは横長モード（480x320）で起動し、Raspberry Pi版と同じレイアウトになります。
+
+#### 方法2: コマンドラインから起動
+
+##### Raspberry Pi版と同じレイアウト（横長480x320）で起動
+```bash
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --log logs/pc_test.csv
+```
+
+##### 基本的な起動（ログなし、カメラ解像度をそのまま表示）
 ```bash
 python src/app.py --cam 0 --width 640 --height 480
 ```
 
-#### ログを記録して起動
+##### ログを記録して起動（カメラ解像度をそのまま表示）
 ```bash
 python src/app.py --cam 0 --width 640 --height 480 --log logs/pc_test.csv
 ```
 
-#### アラートを無効化して起動（計測のみ）
+##### アラートを無効化して起動（計測のみ）
 ```bash
-python src/app.py --cam 0 --width 640 --height 480 --alert-mode off --log logs/pc_test.csv
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --alert-mode off --log logs/pc_test.csv
 ```
 
-#### カメラ番号を変更する場合
+##### カメラ番号を変更する場合
 複数のカメラがある場合、`--cam`オプションでカメラ番号を指定できます。
 ```bash
-# カメラ1を使用
-python src/app.py --cam 1 --width 640 --height 480
+# カメラ1を使用（横長モード）
+python src/app.py --cam 1 --width 640 --height 480 --display-width 480 --display-height 320
 ```
 
-#### 解像度を変更する場合
+##### 解像度を変更する場合
 ```bash
+# 高解像度で起動（カメラ解像度をそのまま表示）
 python src/app.py --cam 0 --width 1280 --height 720
+
+# 高解像度で横長モード（480x320）に表示
+python src/app.py --cam 0 --width 1280 --height 720 --display-width 480 --display-height 320
 ```
 
 ### 6. 動作確認
@@ -133,16 +157,24 @@ python src/app.py --cam 0 --width 1280 --height 720
 ## よく使うコマンド例
 
 ```bash
-# 基本的な起動
+# Raspberry Pi版と同じレイアウト（横長480x320）で起動（推奨）
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --log logs/test.csv
+
+# 基本的な起動（カメラ解像度をそのまま表示）
 python src/app.py --cam 0 --width 640 --height 480 --log logs/test.csv
 
-# 高解像度で起動
-python src/app.py --cam 0 --width 1280 --height 720 --log logs/hd_test.csv
+# 高解像度で横長モードに表示
+python src/app.py --cam 0 --width 1280 --height 720 --display-width 480 --display-height 320 --log logs/hd_test.csv
 
-# アラート無効で計測のみ
-python src/app.py --cam 0 --width 640 --height 480 --alert-mode off --log logs/measure.csv
+# アラート無効で計測のみ（横長モード）
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --alert-mode off --log logs/measure.csv
 
-# セッション情報を付けて記録
-python src/app.py --cam 0 --width 640 --height 480 --log logs/session1.csv --session S001 --participant P01 --task typing
+# セッション情報を付けて記録（横長モード）
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --log logs/session1.csv --session S001 --participant P01 --task typing
 ```
+
+## 表示モードについて
+
+- **横長モード（480x320）**: `--display-width 480 --display-height 320` を指定すると、Raspberry Pi版と同じレイアウトで表示されます。左側にカメラ映像、右側に数値情報とボタンが配置されます。
+- **通常モード**: `--display-width` と `--display-height` を指定しない場合、カメラの解像度をそのまま表示します。
 

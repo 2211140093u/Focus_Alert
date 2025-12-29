@@ -22,6 +22,6 @@ mkdir -p logs
 # タイムスタンプ付きログファイル名
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
-# アプリを起動（高解像度で起動）
-python src/app.py --cam 0 --width 1280 --height 720 --log "logs/pc_${TIMESTAMP}.csv"
+# アプリを起動（横長モード480x320で起動、Pi版と同じレイアウト）
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --log "logs/pc_${TIMESTAMP}.csv"
 

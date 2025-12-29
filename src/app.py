@@ -207,9 +207,14 @@ def main():
             'consecutive_failures': cam_status_dict.get('consecutive_failures', 0),
         }
         
+        # 横長モードの判定（表示幅 > 表示高さ）
+        landscape_mode = (display_width > display_height)
+        
         vis = overlay.draw(frame, feats, score, alert, fps, status=status, 
-                          show_alert_text=alert_enabled, cam_status=cam_status)
-        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on})
+                          show_alert_text=alert_enabled, cam_status=cam_status,
+                          landscape_mode=landscape_mode)
+        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on},
+                                        landscape_mode=landscape_mode)
 
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
