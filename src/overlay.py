@@ -89,7 +89,7 @@ class Overlay:
             vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
             cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
         
-        # フォントサイズ（横長モードでは大きめ、ただし枠からはみ出ないように調整）
+        # フォントサイズ（横長モードでは大きめ）
         font_scale = 0.55 if landscape_mode else 0.4
         font_thickness = 2 if landscape_mode else 1
         line_height = 26 if landscape_mode else 18
@@ -97,16 +97,8 @@ class Overlay:
         
         def put(t, color=(255,255,255)):
             nonlocal y
-            # テキストが枠からはみ出さないように、最大幅を制限
-            max_text_width = panel_w - 15  # 左右の余白を確保
-            # テキストが長すぎる場合は切り詰める
-            (text_w, text_h), _ = cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
-            if text_w > max_text_width:
-                # テキストを切り詰める（簡易版）
-                while text_w > max_text_width and len(t) > 0:
-                    t = t[:-1]
-                    (text_w, text_h), _ = cv2.getTextSize(t + '...', cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
-                t = t + '...'
+            # 数値欄は省略せず、できるだけそのまま表示する
+            # （パネル幅を超えた分は画面側でクリップされる）
             cv2.putText(vis, t, (panel_x + 5, y), cv2.FONT_HERSHEY_SIMPLEX, 
                        font_scale, color, font_thickness, cv2.LINE_AA)
             y += line_height

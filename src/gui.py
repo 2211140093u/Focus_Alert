@@ -406,6 +406,7 @@ class DataViewer:
         self.selected_file = None
         self.mode = 'list'  # 'list', 'view', 'report'
         self.report_viewer = ReportViewer(width=width, height=height)
+        self._list_scroll_offset = 0  # ファイル一覧のスクロールオフセット
         
     def get_log_files(self):
         """ログファイル一覧を取得"""
@@ -429,7 +430,7 @@ class DataViewer:
         return img, []
     
     def _draw_list(self, img):
-        """ファイル一覧を描画"""
+        """ファイル一覧を描画（スクロール対応）"""
         # タイトル
         cv2.putText(img, "View Data", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
         
@@ -443,21 +444,65 @@ class DataViewer:
         
         # ファイル一覧
         files = self.get_log_files()
+        total_files = len(files)
+        
+        # スクロールオフセットを調整（範囲チェック）
+        max_offset = max(0, total_files - 1)
+        self._list_scroll_offset = max(0, min(self._list_scroll_offset, max_offset))
+        
+        # 表示可能なアイテム数を計算
         y_start = 60
         item_height = 40
+        available_height = self.height - y_start - 50  # タイトルとボタンエリアを除く
+        max_visible_items = available_height // item_height
         
-        for i, filename in enumerate(files[:8]):  # 最大8個表示
-            y = y_start + i * item_height
-            if y + item_height > self.height - 50:
-                break
+        # スクロールボタンを追加（ファイルが表示可能数より多い場合）
+        if total_files > max_visible_items:
+            # 上スクロールボタン
+            scroll_up_rect = (self.width - 50, y_start, self.width - 10, y_start + 30)
+            scroll_up_color = (80, 80, 80) if self._list_scroll_offset > 0 else (40, 40, 40)
+            cv2.rectangle(img, (self.width - 50, y_start), (self.width - 10, y_start + 30), scroll_up_color, -1)
+            cv2.rectangle(img, (self.width - 50, y_start), (self.width - 10, y_start + 30), (255, 255, 255), 1)
+            cv2.putText(img, "^", (self.width - 35, y_start + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            if self._list_scroll_offset > 0:
+                buttons.append(('scroll_up', scroll_up_rect))
             
-            # ファイル名表示
-            display_name = filename[:20] + '...' if len(filename) > 20 else filename
+            # 下スクロールボタン
+            scroll_down_y = y_start + max_visible_items * item_height - 30
+            scroll_down_rect = (self.width - 50, scroll_down_y, self.width - 10, scroll_down_y + 30)
+            scroll_down_color = (80, 80, 80) if self._list_scroll_offset < max_offset else (40, 40, 40)
+            cv2.rectangle(img, (self.width - 50, scroll_down_y), (self.width - 10, scroll_down_y + 30), scroll_down_color, -1)
+            cv2.rectangle(img, (self.width - 50, scroll_down_y), (self.width - 10, scroll_down_y + 30), (255, 255, 255), 1)
+            cv2.putText(img, "v", (self.width - 35, scroll_down_y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            if self._list_scroll_offset < max_offset:
+                buttons.append(('scroll_down', scroll_down_rect))
+            
+            # スクロール位置インジケーター
+            if total_files > 0:
+                scroll_info = f"{self._list_scroll_offset + 1}-{min(self._list_scroll_offset + max_visible_items, total_files)}/{total_files}"
+                cv2.putText(img, scroll_info, (self.width - 120, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (200, 200, 200), 1, cv2.LINE_AA)
+        
+        # 表示するファイルの範囲を決定
+        start_idx = self._list_scroll_offset
+        end_idx = min(start_idx + max_visible_items, total_files)
+        
+        # ファイル一覧を描画
+        for i in range(start_idx, end_idx):
+            filename = files[i]
+            display_idx = i - start_idx
+            y = y_start + display_idx * item_height
+            
+            # ファイル名表示（横長モードでは長めに表示可能）
+            if self.landscape:
+                max_name_len = 35  # 横長モードでは長めに
+            else:
+                max_name_len = 20
+            display_name = filename[:max_name_len] + '...' if len(filename) > max_name_len else filename
             color = (0, 255, 255) if self.selected_file == filename else (200, 200, 200)
             cv2.putText(img, display_name, (20, y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
             
             # クリック領域
-            file_rect = (10, y, self.width - 10, y + item_height)
+            file_rect = (10, y, self.width - 60, y + item_height)  # スクロールボタンのスペースを確保
             buttons.append((f'file_{filename}', file_rect))
         
         return img, buttons
@@ -534,6 +579,20 @@ class DataViewer:
                     filename = name.replace('file_', '')
                     self.selected_file = filename
                     self.mode = 'view'
+                    return None
+                elif name == 'scroll_up':
+                    # 上にスクロール
+                    self._list_scroll_offset = max(0, self._list_scroll_offset - 1)
+                    return None
+                elif name == 'scroll_down':
+                    # 下にスクロール
+                    files = self.get_log_files()
+                    y_start = 60
+                    item_height = 40
+                    available_height = self.height - y_start - 50
+                    max_visible_items = available_height // item_height
+                    max_offset = max(0, len(files) - max_visible_items)
+                    self._list_scroll_offset = min(max_offset, self._list_scroll_offset + 1)
                     return None
                 elif self.mode == 'report':
                     # レポートモードの場合、ズームボタンなどの処理をreport_viewerに委譲

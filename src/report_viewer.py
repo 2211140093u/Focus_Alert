@@ -284,6 +284,43 @@ class ReportViewer:
             cv2.rectangle(img, (260, self.height - 50), (310, self.height - 10), (255, 255, 255), 1)
             cv2.putText(img, "Reset", (265, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
             buttons.append(('zoom_reset', zoom_reset_rect))
+            
+            # パンボタン（拡大時のみ有効、横長画面に合わせてコンパクトに配置）
+            if self._zoom_scale > 1.0:
+                # パンエリアの開始位置（Resetボタンの右側）
+                pan_start_x = 320
+                pan_btn_size = 35
+                pan_btn_y_top = self.height - 50
+                pan_btn_y_mid = self.height - 30
+                pan_btn_y_bottom = self.height - 10
+                
+                # 上移動
+                pan_up_rect = (pan_start_x + pan_btn_size, pan_btn_y_top, pan_start_x + pan_btn_size * 2, pan_btn_y_mid)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size, pan_btn_y_top), (pan_start_x + pan_btn_size * 2, pan_btn_y_mid), (120, 120, 80), -1)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size, pan_btn_y_top), (pan_start_x + pan_btn_size * 2, pan_btn_y_mid), (255, 255, 255), 1)
+                cv2.putText(img, "^", (pan_start_x + pan_btn_size + 12, pan_btn_y_top + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                buttons.append(('pan_up', pan_up_rect))
+                
+                # 左移動
+                pan_left_rect = (pan_start_x, pan_btn_y_mid, pan_start_x + pan_btn_size, pan_btn_y_bottom)
+                cv2.rectangle(img, (pan_start_x, pan_btn_y_mid), (pan_start_x + pan_btn_size, pan_btn_y_bottom), (120, 120, 80), -1)
+                cv2.rectangle(img, (pan_start_x, pan_btn_y_mid), (pan_start_x + pan_btn_size, pan_btn_y_bottom), (255, 255, 255), 1)
+                cv2.putText(img, "<", (pan_start_x + 12, pan_btn_y_mid + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                buttons.append(('pan_left', pan_left_rect))
+                
+                # 右移動
+                pan_right_rect = (pan_start_x + pan_btn_size * 2, pan_btn_y_mid, pan_start_x + pan_btn_size * 3, pan_btn_y_bottom)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size * 2, pan_btn_y_mid), (pan_start_x + pan_btn_size * 3, pan_btn_y_bottom), (120, 120, 80), -1)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size * 2, pan_btn_y_mid), (pan_start_x + pan_btn_size * 3, pan_btn_y_bottom), (255, 255, 255), 1)
+                cv2.putText(img, ">", (pan_start_x + pan_btn_size * 2 + 12, pan_btn_y_mid + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                buttons.append(('pan_right', pan_right_rect))
+                
+                # 下移動
+                pan_down_rect = (pan_start_x + pan_btn_size, pan_btn_y_mid, pan_start_x + pan_btn_size * 2, pan_btn_y_bottom)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size, pan_btn_y_mid), (pan_start_x + pan_btn_size * 2, pan_btn_y_bottom), (120, 120, 80), -1)
+                cv2.rectangle(img, (pan_start_x + pan_btn_size, pan_btn_y_mid), (pan_start_x + pan_btn_size * 2, pan_btn_y_bottom), (255, 255, 255), 1)
+                cv2.putText(img, "v", (pan_start_x + pan_btn_size + 12, pan_btn_y_mid + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                buttons.append(('pan_down', pan_down_rect))
         
         # 次のページボタン
         if self.current_page < len(self.pages) - 1:
@@ -357,6 +394,22 @@ class ReportViewer:
                     self._zoom_scale = 1.0
                     self._zoom_offset_x = 0
                     self._zoom_offset_y = 0
+                    return None
+                elif name == 'pan_up':
+                    # 上に移動
+                    self._zoom_offset_y += 20
+                    return None
+                elif name == 'pan_down':
+                    # 下に移動
+                    self._zoom_offset_y -= 20
+                    return None
+                elif name == 'pan_left':
+                    # 左に移動
+                    self._zoom_offset_x += 20
+                    return None
+                elif name == 'pan_right':
+                    # 右に移動
+                    self._zoom_offset_x -= 20
                     return None
         return None
     
