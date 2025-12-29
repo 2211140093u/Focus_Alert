@@ -11,11 +11,11 @@ class Overlay:
         
         if landscape_mode:
             # 横長画面（480x320）向け：左側にカメラ映像、右側に情報パネル
-            # カメラ映像を左側に配置（320x240に縮小）
+            # カメラ映像を左側に配置（縦幅いっぱいに）
             cam_w = 320
-            cam_h = 240
+            cam_h = h  # 縦幅いっぱい
             cam_x = 0
-            cam_y = (h - cam_h) // 2
+            cam_y = 0
             
             # 元のフレームをリサイズして左側に配置
             frame_resized = cv2.resize(frame, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
@@ -24,10 +24,13 @@ class Overlay:
             vis[cam_y:cam_y+cam_h, cam_x:cam_x+cam_w] = frame_resized
             
             # 右側に情報パネル（160x320の領域）
+            # 数値表示は右上、ボタンは右下に配置するため、パネルを2つに分ける
             panel_w = 160
-            panel_h = h - 20
-            panel_x = w - panel_w - 10
-            panel_y = 10
+            # 数値表示パネル（右上）
+            info_panel_h = 200  # 数値表示用の高さ
+            info_panel_x = w - panel_w - 10
+            info_panel_y = 10
+            # ボタンエリア（右下）は draw_buttons で処理
         else:
             # 縦長画面（320×480）向け：従来のレイアウト
             panel_w = min(300, w - 20)
@@ -35,20 +38,26 @@ class Overlay:
             panel_x = 10
             panel_y = 10
         
-        # 半透明の背景（横長モードでは右側パネル全体）
+        # 半透明の背景（横長モードでは右上の情報パネル）
         overlay_bg = vis.copy()
         if landscape_mode:
-            cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
+            # 右上の情報パネル
+            cv2.rectangle(overlay_bg, (info_panel_x, info_panel_y), (info_panel_x + panel_w, info_panel_y + info_panel_h), (0,0,0), -1)
             vis = cv2.addWeighted(vis, 0.2, overlay_bg, 0.8, 0)
+            cv2.rectangle(vis, (info_panel_x, info_panel_y), (info_panel_x + panel_w, info_panel_y + info_panel_h), (255,255,255), 1)
+            panel_x = info_panel_x
+            panel_y = info_panel_y
+            panel_h = info_panel_h
         else:
+            # 縦長モードでは従来通り
             cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
             vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
-        cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
+            cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
         
         # フォントサイズ（横長モードでは大きめ）
-        font_scale = 0.5 if landscape_mode else 0.4
+        font_scale = 0.6 if landscape_mode else 0.4
         font_thickness = 2 if landscape_mode else 1
-        line_height = 24 if landscape_mode else 18
+        line_height = 28 if landscape_mode else 18
         y = panel_y + 20
         
         def put(t, color=(255,255,255)):
@@ -87,17 +96,25 @@ class Overlay:
         gaze_color = (0, 0, 255) if gaze_off else (255, 255, 255)
         put(f"Gaze: {g['gaze_horiz']:.2f} | Off: {'YES' if gaze_off else 'NO'}", gaze_color)
 
-        # リスクスコアのバー表示（横長モードでは大きく）
-        bar_x = panel_x + 5
-        bar_y = panel_y + panel_h - 35 if landscape_mode else panel_y + panel_h - 25
-        bar_w = panel_w - 10
-        bar_h = 20 if landscape_mode else 15
+        # リスクスコアのバー表示（横長モードでは大きく、情報パネル内に配置）
+        if landscape_mode:
+            # 横長モードでは情報パネルの下部に配置
+            bar_x = panel_x + 5
+            bar_y = panel_y + panel_h - 30
+            bar_w = panel_w - 10
+            bar_h = 20
+        else:
+            bar_x = panel_x + 5
+            bar_y = panel_y + panel_h - 25
+            bar_w = panel_w - 10
+            bar_h = 15
+        
         bar_fill_w = int(bar_w * max(0.0, min(1.0, score)))
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (80,80,80), 1)
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_fill_w, bar_y + bar_h), 
                      (0,0,255) if alert else (0,255,0), -1)
         score_text = f"Risk: {score:.2f}"
-        score_font_scale = 0.6 if landscape_mode else font_scale
+        score_font_scale = 0.7 if landscape_mode else font_scale
         text_size = cv2.getTextSize(score_text, cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, font_thickness)[0]
         cv2.putText(vis, score_text, (bar_x + (bar_w - text_size[0]) // 2, bar_y - 3), 
                    cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, 
@@ -126,20 +143,25 @@ class Overlay:
         h, w = vis.shape[:2]
         
         if landscape_mode:
-            # 横長モード：右側パネルに縦に並べる（最小限のボタン）
+            # 横長モード：右側パネルに縦に並べる（全ボタン表示）
             labels = [
                 ('start', 'Start'),
                 ('end', 'Stop'),
+                ('marker', 'Mark'),
+                ('distract', 'Dist'),
+                ('calib', 'Calib'),
                 ('quit', 'Quit'),
             ]
             
-            # 右側パネルに縦に配置
+            # 右側パネルに縦に配置（右下に配置）
             panel_w = 160
             panel_x = w - panel_w - 10
-            pad = 8
+            pad = 5
             btn_w = panel_w - 20
-            btn_h = 50  # 大きく、タッチしやすく
-            y_start = h - (len(labels) * (btn_h + pad) + pad)
+            btn_h = 40  # ボタン高さを少し小さくして6個収める
+            # 右下から配置
+            total_btn_height = len(labels) * (btn_h + pad) + pad
+            y_start = h - total_btn_height
             
             rects = {}
             for idx, (key, text) in enumerate(labels):

@@ -120,8 +120,15 @@ class ReportViewer:
             # 画像ページ
             # パスを正規化（絶対パスに統一）
             if not os.path.isabs(image_path):
+                # 相対パスの場合、report_dirからの相対パスとして解釈
                 image_path = os.path.join(self.report_dir, image_path)
             image_path = os.path.normpath(image_path)  # パスを正規化
+            
+            # デバッグ用：画像パスを出力
+            if not os.path.exists(image_path):
+                print(f"Image not found: {image_path}")
+                print(f"Report dir: {self.report_dir}")
+                print(f"Original path: {page_info.get('path', '')}")
             
             if os.path.exists(image_path):
                 try:

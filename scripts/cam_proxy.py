@@ -50,6 +50,10 @@ main={"size": (args.width, args.height), "format": "RGB888"}
             # NumPy配列として取得（この時点では RGB 順）
             arr = picam.capture_array()
 
+            # 「反時計回りに90度」は「時計回りに270度」と同じです。
+            # OpenCVでは cv2.ROTATE_90_COUNTERCLOCKWISE を使用します。
+            arr = cv2.rotate(arr, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            
             # 【重要】RGB から BGR へ変換
             # OpenCVのimencodeは「BGR」の並びを想定してJPEGを作るため、ここでの変換が不可欠です
             frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)

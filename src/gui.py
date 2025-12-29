@@ -200,7 +200,7 @@ class OptionsMenu:
         img.fill(40)
         
         if self.landscape:
-            # 横長レイアウト：パラメータを大きく表示
+            # 横長レイアウト：パラメータを縦に1列で表示（4項目を縦に並べる）
             # タイトル
             title = "Options"
             cv2.putText(img, title, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
@@ -217,11 +217,11 @@ class OptionsMenu:
             cv2.rectangle(img, (self.width - 110, self.height - 50), (self.width - 10, self.height - 10), (255, 255, 255), 2)
             cv2.putText(img, "Save", (self.width - 95, self.height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
             
-            # パラメータ表示（横に2列）
+            # パラメータ表示（縦に1列、4項目を縦に並べる）
             y_start = 70
-            line_height = 50
+            line_height = 60  # 項目間の間隔を広げる
             col1_x = 20
-            col2_x = self.width // 2 + 10
+            col2_x = 20  # 1列のみ
         else:
             # 縦長レイアウト（従来通り）
             # タイトル
@@ -256,12 +256,10 @@ class OptionsMenu:
         
         for i, (key, label, min_val, max_val) in enumerate(params):
             if self.landscape:
-                # 横長：2列に配置
-                col = i % 2
-                row = i // 2
-                x = col1_x if col == 0 else col2_x
-                y = y_start + row * line_height
-                param_w = (self.width // 2) - 40
+                # 横長：1列に縦に並べる
+                x = col1_x
+                y = y_start + i * line_height
+                param_w = self.width - 150  # ボタン用のスペースを確保
             else:
                 # 縦長：1列
                 x = col1_x
@@ -270,35 +268,40 @@ class OptionsMenu:
             
             value = self.settings[key]
             
-            # パラメータ名（大きく）
-            font_scale = 0.5 if self.landscape else 0.4
-            cv2.putText(img, label, (x, y + 15), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+            # パラメータ名（大きく、左側に配置）
+            font_scale = 0.6 if self.landscape else 0.4
+            cv2.putText(img, label, (x, y + 20), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 2, cv2.LINE_AA)
             
-            # 値表示（大きく）
+            # 値表示（大きく、パラメータ名の下に配置）
             value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
             color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
-            value_font_scale = 0.7 if self.landscape else 0.5
-            cv2.putText(img, value_str, (x, y + 35), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
+            value_font_scale = 0.8 if self.landscape else 0.5
+            cv2.putText(img, value_str, (x, y + 45), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
             
-            # 調整ボタン（-）（大きく）
-            btn_size = 40 if self.landscape else 30
-            minus_rect = (x + param_w - 90, y, x + param_w - 50, y + btn_size)
-            cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (100, 100, 100), -1)
-            cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (255, 255, 255), 2)
-            minus_font_scale = 0.8 if self.landscape else 0.6
-            cv2.putText(img, "-", (x + param_w - 75, y + 28), cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
+            # 調整ボタン（-）（大きく、右側に配置）
+            btn_size = 45 if self.landscape else 30
+            btn_x = self.width - 100  # 右側に配置
+            minus_rect = (btn_x, y + 5, btn_x + 35, y + 5 + btn_size)
+            cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (100, 100, 100), -1)
+            cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (255, 255, 255), 2)
+            minus_font_scale = 0.9 if self.landscape else 0.6
+            (minus_text_w, minus_text_h), _ = cv2.getTextSize("-", cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, 2)
+            cv2.putText(img, "-", (btn_x + (35 - minus_text_w) // 2, y + 5 + (btn_size + minus_text_h) // 2), 
+                       cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
             buttons.append((f'{key}_minus', minus_rect))
             
-            # 調整ボタン（+）（大きく）
-            plus_rect = (x + param_w - 40, y, x + param_w, y + btn_size)
-            cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (100, 100, 100), -1)
-            cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (255, 255, 255), 2)
-            plus_font_scale = 0.8 if self.landscape else 0.6
-            cv2.putText(img, "+", (x + param_w - 25, y + 28), cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
+            # 調整ボタン（+）（大きく、右側に配置）
+            plus_rect = (btn_x + 40, y + 5, btn_x + 75, y + 5 + btn_size)
+            cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (100, 100, 100), -1)
+            cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (255, 255, 255), 2)
+            plus_font_scale = 0.9 if self.landscape else 0.6
+            (plus_text_w, plus_text_h), _ = cv2.getTextSize("+", cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, 2)
+            cv2.putText(img, "+", (btn_x + 40 + (35 - plus_text_w) // 2, y + 5 + (btn_size + plus_text_h) // 2), 
+                       cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
             buttons.append((f'{key}_plus', plus_rect))
             
             # クリック領域（値部分）
-            value_rect = (x, y, x + param_w - 100, y + 40)
+            value_rect = (x, y, btn_x - 10, y + line_height)
             buttons.append((f'{key}_select', value_rect))
         
         return img, buttons
@@ -538,6 +541,10 @@ class DataViewer:
         try:
             script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             report_script = os.path.join(script_dir, 'scripts', 'report.py')
+            
+            # レポートビューアのreport_dirを更新
+            self.report_viewer.report_dir = report_dir
+            
             result = subprocess.run(
                 ['python', report_script, '--log', filepath, '--out', report_path, 
                  '--save-images', '--image-dir', report_dir],
@@ -545,14 +552,20 @@ class DataViewer:
                 text=True
             )
             if result.returncode == 0:
+                print(f"Report generation output: {result.stdout}")
                 # レポートビューアに読み込む
                 if self.report_viewer.load_report(filepath):
                     return 'viewer_ready'
-                return report_path
+                else:
+                    print(f"Failed to load report for {filepath}")
+                    return None
             else:
                 print(f"Report generation error: {result.stderr}")
+                print(f"Report generation stdout: {result.stdout}")
                 return None
         except Exception as e:
             print(f"Error generating report: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
