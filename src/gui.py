@@ -6,17 +6,99 @@ from pathlib import Path
 from report_viewer import ReportViewer
 
 class MainMenu:
-    """メインメニュー画面"""
-    def __init__(self, width=320, height=480):
+    """メインメニュー画面（横長480x320対応）"""
+    def __init__(self, width=480, height=320):
         self.width = width
         self.height = height
         self.selected = None
+        self.landscape = (width > height)  # 横長判定
         
     def draw(self):
         """メニュー画面を描画"""
         img = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         img.fill(40)  # 暗い背景
         
+        if self.landscape:
+            # 横長レイアウト：ボタンを大きく、横に並べる
+            # タイトル
+            title = "Focus Alert"
+            font_scale = 1.0
+            thickness = 2
+            (text_width, text_height), _ = cv2.getTextSize(title, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+            x = (self.width - text_width) // 2
+            y = 40
+            cv2.putText(img, title, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+            
+            # ボタン：横に2列、縦に2行で配置
+            button_height = 80
+            button_width = (self.width - 60) // 2  # 2列
+            button_spacing = 20
+            start_x = 20
+            start_y = 100
+            
+            buttons = []
+            
+            # 1行目
+            # 計測開始ボタン
+            btn1_x = start_x
+            btn1_y = start_y
+            btn1_rect = (btn1_x, btn1_y, btn1_x + button_width, btn1_y + button_height)
+            color1 = (0, 150, 0) if self.selected == 'measure' else (0, 100, 0)
+            cv2.rectangle(img, (btn1_x, btn1_y), (btn1_x + button_width, btn1_y + button_height), color1, -1)
+            cv2.rectangle(img, (btn1_x, btn1_y), (btn1_x + button_width, btn1_y + button_height), (255, 255, 255), 3)
+            text1 = "Start"
+            (tw1, th1), _ = cv2.getTextSize(text1, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            tx1 = btn1_x + (button_width - tw1) // 2
+            ty1 = btn1_y + (button_height + th1) // 2
+            cv2.putText(img, text1, (tx1, ty1), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('measure', btn1_rect))
+            
+            # データ確認ボタン
+            btn2_x = start_x + button_width + button_spacing
+            btn2_y = start_y
+            btn2_rect = (btn2_x, btn2_y, btn2_x + button_width, btn2_y + button_height)
+            color2 = (150, 150, 0) if self.selected == 'data' else (100, 100, 0)
+            cv2.rectangle(img, (btn2_x, btn2_y), (btn2_x + button_width, btn2_y + button_height), color2, -1)
+            cv2.rectangle(img, (btn2_x, btn2_y), (btn2_x + button_width, btn2_y + button_height), (255, 255, 255), 3)
+            text2 = "View Data"
+            (tw2, th2), _ = cv2.getTextSize(text2, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            tx2 = btn2_x + (button_width - tw2) // 2
+            ty2 = btn2_y + (button_height + th2) // 2
+            cv2.putText(img, text2, (tx2, ty2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('data', btn2_rect))
+            
+            # 2行目
+            # オプションボタン
+            btn3_x = start_x
+            btn3_y = start_y + button_height + button_spacing
+            btn3_rect = (btn3_x, btn3_y, btn3_x + button_width, btn3_y + button_height)
+            color3 = (150, 0, 150) if self.selected == 'options' else (100, 0, 100)
+            cv2.rectangle(img, (btn3_x, btn3_y), (btn3_x + button_width, btn3_y + button_height), color3, -1)
+            cv2.rectangle(img, (btn3_x, btn3_y), (btn3_x + button_width, btn3_y + button_height), (255, 255, 255), 3)
+            text3 = "Options"
+            (tw3, th3), _ = cv2.getTextSize(text3, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            tx3 = btn3_x + (button_width - tw3) // 2
+            ty3 = btn3_y + (button_height + th3) // 2
+            cv2.putText(img, text3, (tx3, ty3), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('options', btn3_rect))
+            
+            # 終了ボタン
+            btn4_x = start_x + button_width + button_spacing
+            btn4_y = start_y + button_height + button_spacing
+            btn4_rect = (btn4_x, btn4_y, btn4_x + button_width, btn4_y + button_height)
+            color4 = (150, 0, 0) if self.selected == 'quit' else (100, 0, 0)
+            cv2.rectangle(img, (btn4_x, btn4_y), (btn4_x + button_width, btn4_y + button_height), color4, -1)
+            cv2.rectangle(img, (btn4_x, btn4_y), (btn4_x + button_width, btn4_y + button_height), (255, 255, 255), 3)
+            text4 = "Quit"
+            (tw4, th4), _ = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            tx4 = btn4_x + (button_width - tw4) // 2
+            ty4 = btn4_y + (button_height + th4) // 2
+            cv2.putText(img, text4, (tx4, ty4), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('quit', btn4_rect))
+            
+            return img, buttons
+        
+        # 縦長レイアウト（従来通り）
         # タイトル
         title = "Focus Alert"
         font_scale = 0.8
@@ -98,10 +180,11 @@ class MainMenu:
 
 
 class OptionsMenu:
-    """オプション設定画面"""
-    def __init__(self, width=320, height=480, settings=None):
+    """オプション設定画面（横長480x320対応）"""
+    def __init__(self, width=480, height=320, settings=None):
         self.width = width
         self.height = height
+        self.landscape = (width > height)  # 横長判定
         self.settings = settings or {
             'ear_threshold_ratio': 0.90,
             'ear_baseline_init': 0.45,
@@ -116,25 +199,52 @@ class OptionsMenu:
         img = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         img.fill(40)
         
-        # タイトル
-        title = "Options"
-        cv2.putText(img, title, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-        
-        # 戻るボタン
-        back_rect = (10, self.height - 40, 80, self.height - 10)
-        cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (100, 100, 100), -1)
-        cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (255, 255, 255), 1)
-        cv2.putText(img, "Back", (15, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-        
-        # 保存ボタン
-        save_rect = (self.width - 80, self.height - 40, self.width - 10, self.height - 10)
-        cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (0, 150, 0), -1)
-        cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (255, 255, 255), 1)
-        cv2.putText(img, "Save", (self.width - 75, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-        
-        # パラメータ表示
-        y_start = 60
-        line_height = 50
+        if self.landscape:
+            # 横長レイアウト：パラメータを大きく表示
+            # タイトル
+            title = "Options"
+            cv2.putText(img, title, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # 戻るボタン（大きく）
+            back_rect = (10, self.height - 50, 100, self.height - 10)
+            cv2.rectangle(img, (10, self.height - 50), (100, self.height - 10), (100, 100, 100), -1)
+            cv2.rectangle(img, (10, self.height - 50), (100, self.height - 10), (255, 255, 255), 2)
+            cv2.putText(img, "Back", (25, self.height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # 保存ボタン（大きく）
+            save_rect = (self.width - 110, self.height - 50, self.width - 10, self.height - 10)
+            cv2.rectangle(img, (self.width - 110, self.height - 50), (self.width - 10, self.height - 10), (0, 150, 0), -1)
+            cv2.rectangle(img, (self.width - 110, self.height - 50), (self.width - 10, self.height - 10), (255, 255, 255), 2)
+            cv2.putText(img, "Save", (self.width - 95, self.height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # パラメータ表示（横に2列）
+            y_start = 70
+            line_height = 50
+            col1_x = 20
+            col2_x = self.width // 2 + 10
+        else:
+            # 縦長レイアウト（従来通り）
+            # タイトル
+            title = "Options"
+            cv2.putText(img, title, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # 戻るボタン
+            back_rect = (10, self.height - 40, 80, self.height - 10)
+            cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (100, 100, 100), -1)
+            cv2.rectangle(img, (10, self.height - 40), (80, self.height - 10), (255, 255, 255), 1)
+            cv2.putText(img, "Back", (15, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            
+            # 保存ボタン
+            save_rect = (self.width - 80, self.height - 40, self.width - 10, self.height - 10)
+            cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (0, 150, 0), -1)
+            cv2.rectangle(img, (self.width - 80, self.height - 40), (self.width - 10, self.height - 10), (255, 255, 255), 1)
+            cv2.putText(img, "Save", (self.width - 75, self.height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            
+            # パラメータ表示
+            y_start = 60
+            line_height = 50
+            col1_x = 20
+            col2_x = 20
         params = [
             ('ear_threshold_ratio', 'EAR Threshold', 0.70, 0.98),
             ('ear_baseline_init', 'EAR Baseline', 0.30, 0.60),
@@ -145,31 +255,50 @@ class OptionsMenu:
         buttons = [('back', back_rect), ('save', save_rect)]
         
         for i, (key, label, min_val, max_val) in enumerate(params):
-            y = y_start + i * line_height
+            if self.landscape:
+                # 横長：2列に配置
+                col = i % 2
+                row = i // 2
+                x = col1_x if col == 0 else col2_x
+                y = y_start + row * line_height
+                param_w = (self.width // 2) - 40
+            else:
+                # 縦長：1列
+                x = col1_x
+                y = y_start + i * line_height
+                param_w = self.width - 110
+            
             value = self.settings[key]
             
-            # パラメータ名
-            cv2.putText(img, label, (20, y + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            # パラメータ名（大きく）
+            font_scale = 0.5 if self.landscape else 0.4
+            cv2.putText(img, label, (x, y + 15), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
             
-            # 値表示
+            # 値表示（大きく）
             value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
             color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
-            cv2.putText(img, value_str, (20, y + 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
+            value_font_scale = 0.7 if self.landscape else 0.5
+            cv2.putText(img, value_str, (x, y + 35), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
             
-            # 調整ボタン（-）
-            minus_rect = (self.width - 100, y, self.width - 60, y + 30)
-            cv2.rectangle(img, (self.width - 100, y), (self.width - 60, y + 30), (100, 100, 100), -1)
-            cv2.putText(img, "-", (self.width - 85, y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+            # 調整ボタン（-）（大きく）
+            btn_size = 40 if self.landscape else 30
+            minus_rect = (x + param_w - 90, y, x + param_w - 50, y + btn_size)
+            cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (100, 100, 100), -1)
+            cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (255, 255, 255), 2)
+            minus_font_scale = 0.8 if self.landscape else 0.6
+            cv2.putText(img, "-", (x + param_w - 75, y + 28), cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
             buttons.append((f'{key}_minus', minus_rect))
             
-            # 調整ボタン（+）
-            plus_rect = (self.width - 50, y, self.width - 10, y + 30)
-            cv2.rectangle(img, (self.width - 50, y), (self.width - 10, y + 30), (100, 100, 100), -1)
-            cv2.putText(img, "+", (self.width - 35, y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+            # 調整ボタン（+）（大きく）
+            plus_rect = (x + param_w - 40, y, x + param_w, y + btn_size)
+            cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (100, 100, 100), -1)
+            cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (255, 255, 255), 2)
+            plus_font_scale = 0.8 if self.landscape else 0.6
+            cv2.putText(img, "+", (x + param_w - 25, y + 28), cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
             buttons.append((f'{key}_plus', plus_rect))
             
             # クリック領域（値部分）
-            value_rect = (20, y, self.width - 110, y + 40)
+            value_rect = (x, y, x + param_w - 100, y + 40)
             buttons.append((f'{key}_select', value_rect))
         
         return img, buttons
@@ -236,10 +365,11 @@ class OptionsMenu:
 
 
 class DataViewer:
-    """データ確認画面"""
-    def __init__(self, width=320, height=480, log_dir='logs'):
+    """データ確認画面（横長480x320対応）"""
+    def __init__(self, width=480, height=320, log_dir='logs'):
         self.width = width
         self.height = height
+        self.landscape = (width > height)  # 横長判定
         self.log_dir = log_dir
         self.selected_file = None
         self.mode = 'list'  # 'list', 'view', 'report'

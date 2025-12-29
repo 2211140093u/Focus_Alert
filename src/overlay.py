@@ -5,27 +5,50 @@ class Overlay:
     def __init__(self):
         pass
 
-    def draw(self, frame, feats, score, alert, fps, status=None, show_alert_text=True, cam_status=None):
+    def draw(self, frame, feats, score, alert, fps, status=None, show_alert_text=True, cam_status=None, landscape_mode=False):
         vis = frame.copy()
         h, w = vis.shape[:2]
         
-        # 3.5インチタッチモニタ（320×480）向けに最適化された情報パネル
-        # パネルサイズを小さくして、重要な情報のみ表示
-        panel_w = min(300, w - 20)
-        panel_h = 140
-        panel_x = 10
-        panel_y = 10
+        if landscape_mode:
+            # 横長画面（480x320）向け：左側にカメラ映像、右側に情報パネル
+            # カメラ映像を左側に配置（320x240に縮小）
+            cam_w = 320
+            cam_h = 240
+            cam_x = 0
+            cam_y = (h - cam_h) // 2
+            
+            # 元のフレームをリサイズして左側に配置
+            frame_resized = cv2.resize(frame, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
+            vis = np.zeros((h, w, 3), dtype=np.uint8)
+            vis.fill(20)  # 暗い背景
+            vis[cam_y:cam_y+cam_h, cam_x:cam_x+cam_w] = frame_resized
+            
+            # 右側に情報パネル（160x320の領域）
+            panel_w = 160
+            panel_h = h - 20
+            panel_x = w - panel_w - 10
+            panel_y = 10
+        else:
+            # 縦長画面（320×480）向け：従来のレイアウト
+            panel_w = min(300, w - 20)
+            panel_h = 140
+            panel_x = 10
+            panel_y = 10
         
-        # 半透明の背景
+        # 半透明の背景（横長モードでは右側パネル全体）
         overlay_bg = vis.copy()
-        cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
-        vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
+        if landscape_mode:
+            cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
+            vis = cv2.addWeighted(vis, 0.2, overlay_bg, 0.8, 0)
+        else:
+            cv2.rectangle(overlay_bg, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (0,0,0), -1)
+            vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
         cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
         
-        # フォントサイズを小さく（0.4）
-        font_scale = 0.4
-        font_thickness = 1
-        line_height = 18
+        # フォントサイズ（横長モードでは大きめ）
+        font_scale = 0.5 if landscape_mode else 0.4
+        font_thickness = 2 if landscape_mode else 1
+        line_height = 24 if landscape_mode else 18
         y = panel_y + 20
         
         def put(t, color=(255,255,255)):
@@ -64,19 +87,20 @@ class Overlay:
         gaze_color = (0, 0, 255) if gaze_off else (255, 255, 255)
         put(f"Gaze: {g['gaze_horiz']:.2f} | Off: {'YES' if gaze_off else 'NO'}", gaze_color)
 
-        # リスクスコアのバー表示（コンパクトに）
+        # リスクスコアのバー表示（横長モードでは大きく）
         bar_x = panel_x + 5
-        bar_y = panel_y + panel_h - 25
+        bar_y = panel_y + panel_h - 35 if landscape_mode else panel_y + panel_h - 25
         bar_w = panel_w - 10
-        bar_h = 15
+        bar_h = 20 if landscape_mode else 15
         bar_fill_w = int(bar_w * max(0.0, min(1.0, score)))
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (80,80,80), 1)
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_fill_w, bar_y + bar_h), 
                      (0,0,255) if alert else (0,255,0), -1)
         score_text = f"Risk: {score:.2f}"
-        text_size = cv2.getTextSize(score_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+        score_font_scale = 0.6 if landscape_mode else font_scale
+        text_size = cv2.getTextSize(score_text, cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, font_thickness)[0]
         cv2.putText(vis, score_text, (bar_x + (bar_w - text_size[0]) // 2, bar_y - 3), 
-                   cv2.FONT_HERSHEY_SIMPLEX, font_scale, 
+                   cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, 
                    (0,0,255) if alert else (0,255,0), font_thickness, cv2.LINE_AA)
 
         # アラート表示（大きく目立つように）
@@ -95,13 +119,65 @@ class Overlay:
         
         return vis
 
-    def draw_buttons(self, frame, states=None):
-        # 3.5インチタッチモニタ（320×480）向けに最適化されたタッチUIボタン
+    def draw_buttons(self, frame, states=None, landscape_mode=False):
+        # 横長画面（480x320）向けに最適化されたタッチUIボタン
         # 返り値は辞書: 名前 -> (x1,y1,x2,y2)
         vis = frame
         h, w = vis.shape[:2]
         
-        # ボタン配置: 2行×3列で6個のボタン
+        if landscape_mode:
+            # 横長モード：右側パネルに縦に並べる（最小限のボタン）
+            labels = [
+                ('start', 'Start'),
+                ('end', 'Stop'),
+                ('quit', 'Quit'),
+            ]
+            
+            # 右側パネルに縦に配置
+            panel_w = 160
+            panel_x = w - panel_w - 10
+            pad = 8
+            btn_w = panel_w - 20
+            btn_h = 50  # 大きく、タッチしやすく
+            y_start = h - (len(labels) * (btn_h + pad) + pad)
+            
+            rects = {}
+            for idx, (key, text) in enumerate(labels):
+                y1 = y_start + pad + idx * (btn_h + pad)
+                x1 = panel_x + 10
+                x2 = x1 + btn_w
+                y2 = y1 + btn_h
+                
+                # ボタンの状態に応じた色
+                color = (60, 60, 60)
+                active = False
+                if states and key == 'distract':
+                    active = bool(states.get('distract_on', False))
+                if active:
+                    color = (0, 120, 255)
+                elif key == 'quit':
+                    color = (120, 60, 60)  # Quitボタンは赤系
+                elif key == 'end':
+                    color = (60, 120, 60)  # Stopボタンは緑系
+                
+                # ボタンの描画
+                cv2.rectangle(vis, (x1, y1), (x2, y2), (255, 255, 255), 2)
+                cv2.rectangle(vis, (x1+2, y1+2), (x2-2, y2-2), color, -1)
+                
+                # テキストの中央配置（大きく）
+                font_scale = 0.7
+                font_thickness = 2
+                text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+                text_x = x1 + (btn_w - text_size[0]) // 2
+                text_y = y1 + (btn_h + text_size[1]) // 2
+                cv2.putText(vis, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 
+                           font_scale, (255, 255, 255), font_thickness, cv2.LINE_AA)
+                
+                rects[key] = (x1, y1, x2, y2)
+            
+            return rects
+        
+        # 縦長モード：従来の2行×3列レイアウト
         labels = [
             ('start', 'Start'),
             ('end', 'End'),

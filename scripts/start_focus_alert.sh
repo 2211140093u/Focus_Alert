@@ -112,7 +112,7 @@ APP_LOG="$APP_LOG_DIR/app_${TIMESTAMP}.log"
   exec python "$PROJ_DIR/src/app_gui.py" \
     --backend zmq --zmq-url "$URL" --zmq-topic "$TOPIC" \
     --width "$WIDTH" --height "$HEIGHT" \
-    --display-width 320 --display-height 480 \
+    --display-width 480 --display-height 320 \
     --log-dir "$APP_LOG_DIR" \
     --config-dir "$PROJ_DIR/config"
 ) &
