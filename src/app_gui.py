@@ -178,32 +178,54 @@ def run_measurement(args, settings=None, rotate_display=False):
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
         
-        # フレームを表示解像度にリサイズ
+        # フレームを表示解像度にリサイズ（横長モードではそのまま使用）
         h, w = vis.shape[:2]
         target_w, target_h = display_width, display_height
         
-        if w == target_w and h == target_h:
-            vis_display = vis
-            btn_rects_scaled = btn_rects
+        # 横長モード（480x320）の場合、visは既に正しいサイズになっているはず
+        if landscape_mode:
+            # 横長モードでは、visは既に480x320になっている
+            if w == target_w and h == target_h:
+                vis_display = vis
+                btn_rects_scaled = btn_rects
+            else:
+                # サイズが合わない場合はリサイズ（ただし横長を維持）
+                vis_display = cv2.resize(vis, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                # ボタン座標もスケール
+                scale_x = target_w / w
+                scale_y = target_h / h
+                btn_rects_scaled = {}
+                for name, (x1, y1, x2, y2) in btn_rects.items():
+                    btn_rects_scaled[name] = (
+                        int(x1 * scale_x),
+                        int(y1 * scale_y),
+                        int(x2 * scale_x),
+                        int(y2 * scale_y)
+                    )
         else:
-            scale = min(target_w / w, target_h / h)
-            new_w = int(w * scale)
-            new_h = int(h * scale)
-            vis_resized = cv2.resize(vis, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-            
-            vis_display = np.zeros((target_h, target_w, 3), dtype=np.uint8)
-            y_offset = (target_h - new_h) // 2
-            x_offset = (target_w - new_w) // 2
-            vis_display[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = vis_resized
-            
-            btn_rects_scaled = {}
-            for name, (x1, y1, x2, y2) in btn_rects.items():
-                btn_rects_scaled[name] = (
-                    int(x1 * scale + x_offset),
-                    int(y1 * scale + y_offset),
-                    int(x2 * scale + x_offset),
-                    int(y2 * scale + y_offset)
-                )
+            # 縦長モード（従来通り）
+            if w == target_w and h == target_h:
+                vis_display = vis
+                btn_rects_scaled = btn_rects
+            else:
+                scale = min(target_w / w, target_h / h)
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                vis_resized = cv2.resize(vis, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+                
+                vis_display = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+                y_offset = (target_h - new_h) // 2
+                x_offset = (target_w - new_w) // 2
+                vis_display[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = vis_resized
+                
+                btn_rects_scaled = {}
+                for name, (x1, y1, x2, y2) in btn_rects.items():
+                    btn_rects_scaled[name] = (
+                        int(x1 * scale + x_offset),
+                        int(y1 * scale + y_offset),
+                        int(x2 * scale + x_offset),
+                        int(y2 * scale + y_offset)
+                    )
         
         # 回転表示は無効化
         cv2.imshow(win_name, vis_display)

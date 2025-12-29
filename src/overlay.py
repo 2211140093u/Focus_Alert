@@ -11,13 +11,17 @@ class Overlay:
         
         if landscape_mode:
             # 横長画面（480x320）向け：左側にカメラ映像、右側に情報パネル
-            # カメラ映像を左側に配置（縦幅いっぱいに）
-            cam_w = 320
+            # カメラ映像を左側に配置（縦幅いっぱい、縦横比を維持）
+            frame_h, frame_w = frame.shape[:2]
+            frame_aspect = frame_w / frame_h if frame_h > 0 else 1.0
+            
+            # 縦幅いっぱいに合わせて、縦横比を維持して幅を計算
             cam_h = h  # 縦幅いっぱい
+            cam_w = int(cam_h * frame_aspect)  # 縦横比を維持
             cam_x = 0
             cam_y = 0
             
-            # 元のフレームをリサイズして左側に配置
+            # 元のフレームをリサイズして左側に配置（縦横比を維持）
             frame_resized = cv2.resize(frame, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
             vis = np.zeros((h, w, 3), dtype=np.uint8)
             vis.fill(20)  # 暗い背景
@@ -54,14 +58,24 @@ class Overlay:
             vis = cv2.addWeighted(vis, 0.3, overlay_bg, 0.7, 0)
             cv2.rectangle(vis, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (255,255,255), 1)
         
-        # フォントサイズ（横長モードでは大きめ）
-        font_scale = 0.6 if landscape_mode else 0.4
+        # フォントサイズ（横長モードでは大きめ、ただし枠からはみ出ないように調整）
+        font_scale = 0.55 if landscape_mode else 0.4
         font_thickness = 2 if landscape_mode else 1
-        line_height = 28 if landscape_mode else 18
-        y = panel_y + 20
+        line_height = 26 if landscape_mode else 18
+        y = panel_y + 15  # 上端の余白を少し減らす
         
         def put(t, color=(255,255,255)):
             nonlocal y
+            # テキストが枠からはみ出さないように、最大幅を制限
+            max_text_width = panel_w - 15  # 左右の余白を確保
+            # テキストが長すぎる場合は切り詰める
+            (text_w, text_h), _ = cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
+            if text_w > max_text_width:
+                # テキストを切り詰める（簡易版）
+                while text_w > max_text_width and len(t) > 0:
+                    t = t[:-1]
+                    (text_w, text_h), _ = cv2.getTextSize(t + '...', cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
+                t = t + '...'
             cv2.putText(vis, t, (panel_x + 5, y), cv2.FONT_HERSHEY_SIMPLEX, 
                        font_scale, color, font_thickness, cv2.LINE_AA)
             y += line_height

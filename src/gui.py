@@ -218,8 +218,9 @@ class OptionsMenu:
             cv2.putText(img, "Save", (self.width - 95, self.height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
             
             # パラメータ表示（縦に1列、4項目を縦に並べる）
+            # 項目名と数値を横並びにして、縦幅を節約
             y_start = 70
-            line_height = 60  # 項目間の間隔を広げる
+            line_height = 50  # 項目間の間隔を調整
             col1_x = 20
             col2_x = 20  # 1列のみ
         else:
@@ -268,41 +269,69 @@ class OptionsMenu:
             
             value = self.settings[key]
             
-            # パラメータ名（大きく、左側に配置）
-            font_scale = 0.6 if self.landscape else 0.4
-            cv2.putText(img, label, (x, y + 20), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 2, cv2.LINE_AA)
-            
-            # 値表示（大きく、パラメータ名の下に配置）
-            value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
-            color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
-            value_font_scale = 0.8 if self.landscape else 0.5
-            cv2.putText(img, value_str, (x, y + 45), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
-            
-            # 調整ボタン（-）（大きく、右側に配置）
-            btn_size = 45 if self.landscape else 30
-            btn_x = self.width - 100  # 右側に配置
-            minus_rect = (btn_x, y + 5, btn_x + 35, y + 5 + btn_size)
-            cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (100, 100, 100), -1)
-            cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (255, 255, 255), 2)
-            minus_font_scale = 0.9 if self.landscape else 0.6
-            (minus_text_w, minus_text_h), _ = cv2.getTextSize("-", cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, 2)
-            cv2.putText(img, "-", (btn_x + (35 - minus_text_w) // 2, y + 5 + (btn_size + minus_text_h) // 2), 
-                       cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
-            buttons.append((f'{key}_minus', minus_rect))
-            
-            # 調整ボタン（+）（大きく、右側に配置）
-            plus_rect = (btn_x + 40, y + 5, btn_x + 75, y + 5 + btn_size)
-            cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (100, 100, 100), -1)
-            cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (255, 255, 255), 2)
-            plus_font_scale = 0.9 if self.landscape else 0.6
-            (plus_text_w, plus_text_h), _ = cv2.getTextSize("+", cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, 2)
-            cv2.putText(img, "+", (btn_x + 40 + (35 - plus_text_w) // 2, y + 5 + (btn_size + plus_text_h) // 2), 
-                       cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
-            buttons.append((f'{key}_plus', plus_rect))
-            
-            # クリック領域（値部分）
-            value_rect = (x, y, btn_x - 10, y + line_height)
-            buttons.append((f'{key}_select', value_rect))
+            if self.landscape:
+                # 横長モード：項目名と数値を横並びに配置
+                # パラメータ名（左側）
+                font_scale = 0.55
+                (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 2)
+                cv2.putText(img, label, (x, y + 25), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 2, cv2.LINE_AA)
+                
+                # 値表示（項目名の右側、横並び）
+                value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
+                color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
+                value_font_scale = 0.7
+                value_x = x + label_w + 15  # 項目名の右側に配置
+                cv2.putText(img, value_str, (value_x, y + 25), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
+                
+                # 調整ボタン（-）（右側に配置）
+                btn_size = 40
+                btn_x = self.width - 100  # 右側に配置
+                minus_rect = (btn_x, y + 5, btn_x + 35, y + 5 + btn_size)
+                cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (100, 100, 100), -1)
+                cv2.rectangle(img, (btn_x, y + 5), (btn_x + 35, y + 5 + btn_size), (255, 255, 255), 2)
+                minus_font_scale = 0.8
+                (minus_text_w, minus_text_h), _ = cv2.getTextSize("-", cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, 2)
+                cv2.putText(img, "-", (btn_x + (35 - minus_text_w) // 2, y + 5 + (btn_size + minus_text_h) // 2), 
+                           cv2.FONT_HERSHEY_SIMPLEX, minus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
+                buttons.append((f'{key}_minus', minus_rect))
+                
+                # 調整ボタン（+）（右側に配置）
+                plus_rect = (btn_x + 40, y + 5, btn_x + 75, y + 5 + btn_size)
+                cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (100, 100, 100), -1)
+                cv2.rectangle(img, (btn_x + 40, y + 5), (btn_x + 75, y + 5 + btn_size), (255, 255, 255), 2)
+                plus_font_scale = 0.8
+                (plus_text_w, plus_text_h), _ = cv2.getTextSize("+", cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, 2)
+                cv2.putText(img, "+", (btn_x + 40 + (35 - plus_text_w) // 2, y + 5 + (btn_size + plus_text_h) // 2), 
+                           cv2.FONT_HERSHEY_SIMPLEX, plus_font_scale, (255, 255, 255), 2, cv2.LINE_AA)
+                buttons.append((f'{key}_plus', plus_rect))
+                
+                # クリック領域（値部分）
+                value_rect = (x, y, btn_x - 10, y + line_height)
+                buttons.append((f'{key}_select', value_rect))
+            else:
+                # 縦長モード（従来通り）
+                font_scale = 0.4
+                cv2.putText(img, label, (x, y + 15), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+                value_str = f"{value:.2f}" if isinstance(value, float) else f"{int(value)}"
+                color = (0, 255, 255) if self.selected_param == key else (200, 200, 200)
+                value_font_scale = 0.5
+                cv2.putText(img, value_str, (x, y + 35), cv2.FONT_HERSHEY_SIMPLEX, value_font_scale, color, 2, cv2.LINE_AA)
+                
+                btn_size = 30
+                minus_rect = (x + param_w - 90, y, x + param_w - 50, y + btn_size)
+                cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (100, 100, 100), -1)
+                cv2.rectangle(img, (x + param_w - 90, y), (x + param_w - 50, y + btn_size), (255, 255, 255), 2)
+                cv2.putText(img, "-", (x + param_w - 75, y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+                buttons.append((f'{key}_minus', minus_rect))
+                
+                plus_rect = (x + param_w - 40, y, x + param_w, y + btn_size)
+                cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (100, 100, 100), -1)
+                cv2.rectangle(img, (x + param_w - 40, y), (x + param_w, y + btn_size), (255, 255, 255), 2)
+                cv2.putText(img, "+", (x + param_w - 25, y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+                buttons.append((f'{key}_plus', plus_rect))
+                
+                value_rect = (x, y, x + param_w - 100, y + 40)
+                buttons.append((f'{key}_select', value_rect))
         
         return img, buttons
     
