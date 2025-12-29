@@ -157,8 +157,11 @@ class ReportViewer:
                             self._current_image_path = image_path
                             self._split_part_idx = 0
                         
-                        # 横長グラフ（アスペクト比 > 2.0）の場合、縦に3分割して表示
-                        if aspect_ratio > 2.0:
+                        # 時系列グラフ（タイトルに「時系列グラフ」が含まれる）は分割せず、1枚の画像として表示
+                        is_timeseries = '時系列グラフ' in page_title or 'Timeseries' in page_title
+                        
+                        # 横長グラフ（アスペクト比 > 2.0）の場合、時系列グラフ以外は縦に3分割して表示
+                        if aspect_ratio > 2.0 and not is_timeseries:
                             # 横長グラフを3つに分割
                             part_w = img_w // 3
                             part_idx = self._split_part_idx  # 現在表示する部分（0, 1, 2）

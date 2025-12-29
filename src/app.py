@@ -52,9 +52,9 @@ def main():
     args = parse_args()
 
     try:
-        cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
-                    backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v,
-                    zmq_url=args.zmq_url, zmq_topic=args.zmq_topic).open()
+    cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
+                backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v,
+                zmq_url=args.zmq_url, zmq_topic=args.zmq_topic).open()
     except Exception as e:
         print(f"Error: Failed to open camera: {e}")
         print("Please check camera connection and permissions.")
@@ -139,7 +139,7 @@ def main():
     else:
         display_width = args.display_width
         display_height = args.display_height
-    
+
     cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(win_name, display_width, display_height)
     # Raspberry Pi用のみフルスクリーン
@@ -165,8 +165,8 @@ def main():
             frame_failure_count = 0  # 成功したらリセット
         t0 = time.time()
         try:
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            fm = face.process(rgb)
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        fm = face.process(rgb)
         except Exception as e:
             print(f"Error processing frame: {e}")
             fm = None

@@ -17,7 +17,8 @@ class Overlay:
             
             # 左側のカメラ映像エリアの幅を決定（右側に160pxのパネルを確保）
             cam_w_max = w - 160 - 10  # 右側パネル（160px）+ 余白（10px）
-            cam_h = h  # 縦幅いっぱい
+            # 縦幅を増やして縦横比を修正（画面の高さより少し大きくする）
+            cam_h = int(h * 1.1)  # 縦幅を10%増やす（画面からはみ出すが、縦横比を修正）
             
             # 縦横比を維持して、縦長でトリミングする
             # 元のフレームの中央部分を縦長で切り出す
@@ -35,11 +36,17 @@ class Overlay:
                 # 縦長のフレームの場合、そのまま使用
                 frame_cropped = frame
             
-            # 切り出したフレームをリサイズ
+            # 切り出したフレームをリサイズ（縦横比を維持）
             crop_h, crop_w = frame_cropped.shape[:2]
             scale = min(cam_w_max / crop_w, cam_h / crop_h)
             cam_w = int(crop_w * scale)
             cam_h = int(crop_h * scale)
+            
+            # 画面内に収まるように調整（縦方向は中央配置、横方向は左端）
+            if cam_h > h:
+                cam_h = h  # 画面の高さに制限
+                # 縦横比を維持して幅を再計算
+                cam_w = int(cam_h * (crop_w / crop_h))
             
             frame_resized = cv2.resize(frame_cropped, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
             
