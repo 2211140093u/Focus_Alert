@@ -222,29 +222,66 @@ def save_report_images(sections, image_dir, html_path):
     
     for img_idx, img_b64 in enumerate(image_b64_list):
         if img_idx < len(image_types):
-            img_title = f"{section['title']} - {image_types[img_idx]}"
+            img_title_base = f"{section['title']} - {image_types[img_idx]}"
         else:
-            img_title = f"{section['title']} - グラフ{img_idx + 1}"
+            img_title_base = f"{section['title']} - グラフ{img_idx + 1}"
         
-        # 画像ファイル名
-        img_filename = f"{report_base_name}_p{len(pages)}.png"
-        img_path = os.path.join(image_dir, img_filename)
-        
-        # Base64デコードして保存
+        # Base64デコード
         try:
             img_data = base64.b64decode(img_b64)
-            with open(img_path, 'wb') as f:
-                f.write(img_data)
+            import io
+            from PIL import Image
+            import numpy as np
             
-            # 相対パスで保存（report_dirからの相対パス）
-            rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
-            pages.append({
-                'type': 'image',
-                'title': img_title,
-                'path': rel_path
-            })
+            # PILで画像を読み込み
+            pil_img = Image.open(io.BytesIO(img_data))
+            img_array = np.array(pil_img)
+            
+            # 時系列グラフ（最初の画像）の場合、3つのサブプロットに分割
+            if img_idx == 0 and image_types[0] in img_title_base:
+                # 時系列グラフを3つに分割
+                img_h, img_w = img_array.shape[:2]
+                subplot_h = img_h // 3
+                
+                subplot_titles = ['Risk', 'EAR', 'Gaze']
+                for sub_idx in range(3):
+                    y_start = sub_idx * subplot_h
+                    y_end = (sub_idx + 1) * subplot_h if sub_idx < 2 else img_h
+                    subplot_img = img_array[y_start:y_end, :]
+                    
+                    # 画像ファイル名
+                    img_filename = f"{report_base_name}_p{len(pages)}.png"
+                    img_path = os.path.join(image_dir, img_filename)
+                    
+                    # 保存
+                    subplot_pil = Image.fromarray(subplot_img)
+                    subplot_pil.save(img_path)
+                    
+                    # 相対パスで保存
+                    rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
+                    pages.append({
+                        'type': 'image',
+                        'title': f"{img_title_base} - {subplot_titles[sub_idx]}",
+                        'path': rel_path
+                    })
+            else:
+                # 通常の画像はそのまま保存
+                img_filename = f"{report_base_name}_p{len(pages)}.png"
+                img_path = os.path.join(image_dir, img_filename)
+                
+                pil_img.save(img_path)
+                
+                # 相対パスで保存
+                rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
+                pages.append({
+                    'type': 'image',
+                    'title': img_title_base,
+                    'path': rel_path
+                })
         except Exception as e:
             print(f"Error saving image {img_idx}: {e}")
+            import traceback
+            traceback.print_exc()
     
     # メタデータを保存
     meta_filename = f"{report_base_name}_meta.json"

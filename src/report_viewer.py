@@ -22,6 +22,9 @@ class ReportViewer:
         self.meta_info = {}
         self._split_part_idx = 0  # 横長グラフの分割表示用（0, 1, 2）
         self._current_image_path = None  # 現在表示中の画像パス
+        self._zoom_scale = 1.0  # 拡大縮小スケール（1.0 = 通常、2.0 = 2倍など）
+        self._zoom_offset_x = 0  # 拡大時のオフセット（パン用）
+        self._zoom_offset_y = 0
         
     def load_report(self, csv_file_path):
         """レポートを読み込み（CSVファイルパスから対応するレポートを探す）"""
@@ -190,32 +193,51 @@ class ReportViewer:
                             cv2.putText(img, split_text, (10, self.height - 60), 
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
                         else:
-                            # 通常の画像（縦長または正方形）は従来通り
-                            scale = min(content_w / img_w, content_h / img_h)
+                            # 通常の画像（縦長または正方形）は拡大縮小対応
+                            # 基本スケールを計算
+                            base_scale = min(content_w / img_w, content_h / img_h)
+                            # 拡大縮小スケールを適用
+                            scale = base_scale * self._zoom_scale
                             new_w = int(img_w * scale)
                             new_h = int(img_h * scale)
                             
                             resized = cv2.resize(page_img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
                             
-                            # 中央配置
-                            x_offset = (content_w - new_w) // 2 + 10
-                            y_offset = content_y + (content_h - new_h) // 2
+                            # 中央配置（拡大時はオフセットを考慮）
+                            x_offset = (content_w - new_w) // 2 + 10 + self._zoom_offset_x
+                            y_offset = content_y + (content_h - new_h) // 2 + self._zoom_offset_y
                             
-                            # 画像を配置（範囲チェック）
-                            if (y_offset + new_h <= self.height and x_offset + new_w <= self.width and
-                                y_offset >= 0 and x_offset >= 0):
-                                img[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
-                            else:
-                                # 範囲外の場合はさらに縮小
-                                scale2 = min((self.width - 20) / img_w, content_h / img_h)
-                                new_w2 = int(img_w * scale2)
-                                new_h2 = int(img_h * scale2)
-                                resized2 = cv2.resize(page_img, (new_w2, new_h2), interpolation=cv2.INTER_LINEAR)
-                                x_offset2 = (self.width - new_w2) // 2
-                                y_offset2 = content_y + (content_h - new_h2) // 2
-                                if (y_offset2 + new_h2 <= self.height and x_offset2 + new_w2 <= self.width and
-                                    y_offset2 >= 0 and x_offset2 >= 0):
-                                    img[y_offset2:y_offset2+new_h2, x_offset2:x_offset2+new_w2] = resized2
+                            # 画像の表示範囲を計算（画面内に収まるように）
+                            display_x1 = max(10, x_offset)
+                            display_y1 = max(content_y, y_offset)
+                            display_x2 = min(self.width - 10, x_offset + new_w)
+                            display_y2 = min(self.height - 60, y_offset + new_h)
+                            
+                            # 元画像からの切り出し位置を計算
+                            src_x1 = max(0, (10 - x_offset) / scale) if x_offset < 10 else 0
+                            src_y1 = max(0, (content_y - y_offset) / scale) if y_offset < content_y else 0
+                            src_x2 = min(img_w, (self.width - 10 - x_offset) / scale) if x_offset + new_w > self.width - 10 else img_w
+                            src_y2 = min(img_h, (self.height - 60 - y_offset) / scale) if y_offset + new_h > self.height - 60 else img_h
+                            
+                            # 切り出し
+                            if src_x2 > src_x1 and src_y2 > src_y1:
+                                src_w = int(src_x2 - src_x1)
+                                src_h = int(src_y2 - src_y1)
+                                src_img = resized[int(src_y1*scale):int(src_y2*scale), int(src_x1*scale):int(src_x2*scale)]
+                                
+                                # 表示サイズに合わせてリサイズ
+                                if src_w > 0 and src_h > 0:
+                                    display_w = display_x2 - display_x1
+                                    display_h = display_y2 - display_y1
+                                    if display_w > 0 and display_h > 0:
+                                        final_img = cv2.resize(src_img, (display_w, display_h), interpolation=cv2.INTER_LINEAR)
+                                        img[display_y1:display_y2, display_x1:display_x2] = final_img
+                            
+                            # 拡大縮小インジケーター
+                            if self._zoom_scale != 1.0:
+                                zoom_text = f"Zoom: {self._zoom_scale:.1f}x"
+                                cv2.putText(img, zoom_text, (10, self.height - 60), 
+                                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
                 except Exception as e:
                     cv2.putText(img, f"Image Load Error: {e}", (10, content_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         
@@ -236,6 +258,29 @@ class ReportViewer:
             cv2.rectangle(img, (80, self.height - 50), (130, self.height - 10), (255, 255, 255), 1)
             cv2.putText(img, "<Prev", (85, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             buttons.append(('prev', prev_rect))
+        
+        # 拡大縮小ボタン（画像ページの場合のみ）
+        if page_type == 'image':
+            # 拡大ボタン
+            zoom_in_rect = (140, self.height - 50, 190, self.height - 10)
+            cv2.rectangle(img, (140, self.height - 50), (190, self.height - 10), (80, 120, 80), -1)
+            cv2.rectangle(img, (140, self.height - 50), (190, self.height - 10), (255, 255, 255), 1)
+            cv2.putText(img, "+", (165, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('zoom_in', zoom_in_rect))
+            
+            # 縮小ボタン
+            zoom_out_rect = (200, self.height - 50, 250, self.height - 10)
+            cv2.rectangle(img, (200, self.height - 50), (250, self.height - 10), (80, 120, 80), -1)
+            cv2.rectangle(img, (200, self.height - 50), (250, self.height - 10), (255, 255, 255), 1)
+            cv2.putText(img, "-", (225, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+            buttons.append(('zoom_out', zoom_out_rect))
+            
+            # リセットボタン
+            zoom_reset_rect = (260, self.height - 50, 310, self.height - 10)
+            cv2.rectangle(img, (260, self.height - 50), (310, self.height - 10), (120, 80, 80), -1)
+            cv2.rectangle(img, (260, self.height - 50), (310, self.height - 10), (255, 255, 255), 1)
+            cv2.putText(img, "Reset", (265, self.height - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            buttons.append(('zoom_reset', zoom_reset_rect))
         
         # 次のページボタン
         if self.current_page < len(self.pages) - 1:
@@ -263,6 +308,9 @@ class ReportViewer:
                         self.current_page -= 1
                         self._split_part_idx = 0  # ページが変わったら分割インデックスをリセット
                         self._current_image_path = None
+                        self._zoom_scale = 1.0  # ズームもリセット
+                        self._zoom_offset_x = 0
+                        self._zoom_offset_y = 0
                     return None
                 elif name == 'next':
                     # 横長グラフの分割表示の場合、まず分割部分を切り替え
@@ -285,6 +333,27 @@ class ReportViewer:
                         self.current_page += 1
                         self._split_part_idx = 0  # ページが変わったら分割インデックスをリセット
                         self._current_image_path = None
+                        self._zoom_scale = 1.0  # ズームもリセット
+                        self._zoom_offset_x = 0
+                        self._zoom_offset_y = 0
+                    return None
+                elif name == 'zoom_in':
+                    # 拡大（最大3倍まで）
+                    self._zoom_scale = min(3.0, self._zoom_scale * 1.2)
+                    return None
+                elif name == 'zoom_out':
+                    # 縮小（最小0.5倍まで）
+                    self._zoom_scale = max(0.5, self._zoom_scale / 1.2)
+                    # 縮小時はオフセットもリセット
+                    if self._zoom_scale <= 1.0:
+                        self._zoom_offset_x = 0
+                        self._zoom_offset_y = 0
+                    return None
+                elif name == 'zoom_reset':
+                    # ズームリセット
+                    self._zoom_scale = 1.0
+                    self._zoom_offset_x = 0
+                    self._zoom_offset_y = 0
                     return None
         return None
     

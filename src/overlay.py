@@ -11,18 +11,42 @@ class Overlay:
         
         if landscape_mode:
             # 横長画面（480x320）向け：左側にカメラ映像、右側に情報パネル
-            # カメラ映像を左側に配置（縦幅いっぱい、縦横比を維持）
+            # カメラ映像を左側に配置（縦長でトリミング、縦横比を維持）
             frame_h, frame_w = frame.shape[:2]
             frame_aspect = frame_w / frame_h if frame_h > 0 else 1.0
             
-            # 縦幅いっぱいに合わせて、縦横比を維持して幅を計算
+            # 左側のカメラ映像エリアの幅を決定（右側に160pxのパネルを確保）
+            cam_w_max = w - 160 - 10  # 右側パネル（160px）+ 余白（10px）
             cam_h = h  # 縦幅いっぱい
-            cam_w = int(cam_h * frame_aspect)  # 縦横比を維持
-            cam_x = 0
-            cam_y = 0
             
-            # 元のフレームをリサイズして左側に配置（縦横比を維持）
-            frame_resized = cv2.resize(frame, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
+            # 縦横比を維持して、縦長でトリミングする
+            # 元のフレームの中央部分を縦長で切り出す
+            if frame_aspect > 1.0:
+                # 横長のフレームの場合、中央部分を縦長で切り出す
+                target_aspect = cam_w_max / cam_h  # 目標の縦横比
+                if frame_aspect > target_aspect:
+                    # フレームが横長すぎる場合、中央部分を切り出す
+                    crop_w = int(frame_h * target_aspect)
+                    crop_x = (frame_w - crop_w) // 2
+                    frame_cropped = frame[:, crop_x:crop_x+crop_w]
+                else:
+                    frame_cropped = frame
+            else:
+                # 縦長のフレームの場合、そのまま使用
+                frame_cropped = frame
+            
+            # 切り出したフレームをリサイズ
+            crop_h, crop_w = frame_cropped.shape[:2]
+            scale = min(cam_w_max / crop_w, cam_h / crop_h)
+            cam_w = int(crop_w * scale)
+            cam_h = int(crop_h * scale)
+            
+            frame_resized = cv2.resize(frame_cropped, (cam_w, cam_h), interpolation=cv2.INTER_LINEAR)
+            
+            # 左側に配置
+            cam_x = 0
+            cam_y = (h - cam_h) // 2  # 縦方向中央配置
+            
             vis = np.zeros((h, w, 3), dtype=np.uint8)
             vis.fill(20)  # 暗い背景
             vis[cam_y:cam_y+cam_h, cam_x:cam_x+cam_w] = frame_resized
