@@ -70,14 +70,18 @@ class Overlay:
             rec_color = (100, 100, 100)  # 灰色
         
         # 計測状態を大きく表示
-        rec_font_scale = 0.6 if landscape_mode else 0.5
+        rec_font_scale = 0.5 if landscape_mode else 0.45  # フォントサイズを少し小さくしてはみ出しを防ぐ
         rec_font_thickness = 2
         rec_text_size = cv2.getTextSize(rec_text, cv2.FONT_HERSHEY_SIMPLEX, rec_font_scale, rec_font_thickness)[0]
+        # テキストがパネル幅を超える場合はフォントサイズを調整
+        if rec_text_size[0] > panel_w - 20:
+            rec_font_scale = 0.4 if landscape_mode else 0.35
+            rec_text_size = cv2.getTextSize(rec_text, cv2.FONT_HERSHEY_SIMPLEX, rec_font_scale, rec_font_thickness)[0]
         rec_x = panel_x + (panel_w - rec_text_size[0]) // 2
         rec_y = panel_y + 25
         # 背景を描画
         cv2.rectangle(vis, (rec_x - 5, rec_y - rec_text_size[1] - 5), 
-                     (rec_x + rec_text_size[0] + 5, rec_y + 5), (0, 0, 0), -1)
+                     (min(panel_x + panel_w - 5, rec_x + rec_text_size[0] + 5), rec_y + 5), (0, 0, 0), -1)
         cv2.putText(vis, rec_text, (rec_x, rec_y), cv2.FONT_HERSHEY_SIMPLEX, 
                    rec_font_scale, rec_color, rec_font_thickness, cv2.LINE_AA)
         

@@ -64,7 +64,7 @@ def load_log(path: str):
     return frames, events
 
 
-def figure_concentration(frames: pd.DataFrame, title: str, dpi=600):
+def figure_concentration(frames: pd.DataFrame, events: pd.DataFrame, title: str, dpi=600):
     """集中度スコアの時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -77,6 +77,16 @@ def figure_concentration(frames: pd.DataFrame, title: str, dpi=600):
             # アラート時の集中度スコアも変換
             alert_concentration = 1.0 - a["risk"]
             ax.scatter(a["ts"], alert_concentration, color="red", s=20, label="Alert", zorder=5)
+    # ブロックの切替点を縦線でマーキング
+    if events is not None and len(events) > 0:
+        block_events = events[events["event"].isin(["block_start", "block_end"])]
+        for _, evt in block_events.iterrows():
+            ts = evt["ts"]
+            if evt["event"] == "block_start":
+                block_id = evt.get("block_id", "?")
+                ax.axvline(ts, color="green", alpha=0.5, linestyle="-", linewidth=1.5, label="Block Start" if evt.name == block_events.index[0] else "")
+            elif evt["event"] == "block_end":
+                ax.axvline(ts, color="red", alpha=0.5, linestyle="-", linewidth=1.5, label="Block End" if evt.name == block_events.index[0] else "")
     # 注意分散区間を縦線でマーキング
     if "distractor_active" in frames:
         dmask = frames["distractor_active"].values
@@ -97,7 +107,7 @@ def figure_concentration(frames: pd.DataFrame, title: str, dpi=600):
     fig.tight_layout()
     return fig
 
-def figure_ear(frames: pd.DataFrame, title: str, dpi=600):
+def figure_ear(frames: pd.DataFrame, events: pd.DataFrame, title: str, dpi=600):
     """EAR（Eye Aspect Ratio）の時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -107,6 +117,15 @@ def figure_ear(frames: pd.DataFrame, title: str, dpi=600):
         ax.plot(t, frames["ear_base"], label="EAR baseline", color="#98df8a", alpha=0.8, linewidth=1.2)
     if "ear_thr" in frames:
         ax.plot(t, frames["ear_thr"], label="EAR threshold", color="#d62728", alpha=0.6, linestyle="--", linewidth=1.2)
+    # ブロックの切替点を縦線でマーキング
+    if events is not None and len(events) > 0:
+        block_events = events[events["event"].isin(["block_start", "block_end"])]
+        for _, evt in block_events.iterrows():
+            ts = evt["ts"]
+            if evt["event"] == "block_start":
+                ax.axvline(ts, color="green", alpha=0.5, linestyle="-", linewidth=1.5, label="Block Start" if evt.name == block_events.index[0] else "")
+            elif evt["event"] == "block_end":
+                ax.axvline(ts, color="red", alpha=0.5, linestyle="-", linewidth=1.5, label="Block End" if evt.name == block_events.index[0] else "")
     # 注意分散区間を縦線でマーキング
     if "distractor_active" in frames:
         dmask = frames["distractor_active"].values
@@ -125,7 +144,7 @@ def figure_ear(frames: pd.DataFrame, title: str, dpi=600):
     fig.tight_layout()
     return fig
 
-def figure_gaze(frames: pd.DataFrame, title: str, dpi=600):
+def figure_gaze(frames: pd.DataFrame, events: pd.DataFrame, title: str, dpi=600):
     """視線（Gaze）の時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -138,6 +157,15 @@ def figure_gaze(frames: pd.DataFrame, title: str, dpi=600):
             ax.axhline(-thr, color="#c5b0d5", linestyle="--", linewidth=1.2)
         except Exception:
             pass
+    # ブロックの切替点を縦線でマーキング
+    if events is not None and len(events) > 0:
+        block_events = events[events["event"].isin(["block_start", "block_end"])]
+        for _, evt in block_events.iterrows():
+            ts = evt["ts"]
+            if evt["event"] == "block_start":
+                ax.axvline(ts, color="green", alpha=0.5, linestyle="-", linewidth=1.5, label="Block Start" if evt.name == block_events.index[0] else "")
+            elif evt["event"] == "block_end":
+                ax.axvline(ts, color="red", alpha=0.5, linestyle="-", linewidth=1.5, label="Block End" if evt.name == block_events.index[0] else "")
     # 注意分散区間を縦線でマーキング
     if "distractor_active" in frames:
         dmask = frames["distractor_active"].values
@@ -425,11 +453,11 @@ def main():
         sess_title = f"{Path(lp).name}"
         # 図表の生成（高解像度で生成：dpi=600）
         # 時系列グラフを3つの別々の画像として生成
-        concentration_fig = figure_concentration(frames, title=sess_title, dpi=600)
+        concentration_fig = figure_concentration(frames, events, title=sess_title, dpi=600)
         concentration_b64 = b64_png(concentration_fig, dpi=600)
-        ear_fig = figure_ear(frames, title=sess_title, dpi=600)
+        ear_fig = figure_ear(frames, events, title=sess_title, dpi=600)
         ear_b64 = b64_png(ear_fig, dpi=600)
-        gaze_fig = figure_gaze(frames, title=sess_title, dpi=600)
+        gaze_fig = figure_gaze(frames, events, title=sess_title, dpi=600)
         gaze_b64 = b64_png(gaze_fig, dpi=600)
         
         hist_fig = figure_histograms(frames, title=sess_title)
