@@ -29,7 +29,7 @@ def run_measurement(args, settings=None, rotate_display=False):
     if settings:
         args.ear_threshold_ratio = settings.get('ear_threshold_ratio', args.ear_threshold_ratio)
         args.ear_baseline_init = settings.get('ear_baseline_init', args.ear_baseline_init)
-        # リスク閾値とクールダウンはfusion.pyとapp.pyで直接設定する必要がある
+        # 集中度閾値とクールダウンはfusion.pyとapp.pyで直接設定する必要がある
     
     try:
         cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
@@ -45,9 +45,14 @@ def run_measurement(args, settings=None, rotate_display=False):
     blink.ear_threshold_ratio = args.ear_threshold_ratio
     gaze = GazeEstimator()
     fusion = FusionScorer()
-    # 設定からリスク閾値を適用
+    # 設定から集中度閾値を適用（後方互換性のためrisk_thresholdも確認）
     if settings:
-        fusion.hi = settings.get('risk_threshold', fusion.hi)
+        # 集中度閾値からリスク閾値に変換（1.0 - concentration_threshold）
+        if 'concentration_threshold' in settings:
+            fusion.hi = 1.0 - settings.get('concentration_threshold', 0.45)
+        elif 'risk_threshold' in settings:
+            # 後方互換性: 古い設定ファイルの場合
+            fusion.hi = settings.get('risk_threshold', fusion.hi)
     perso = Personalizer(phase=args.phase, calib_seconds=args.calib_seconds)
     
     try:
@@ -269,7 +274,7 @@ def run_measurement(args, settings=None, rotate_display=False):
                         'phase': args.phase if hasattr(args, 'phase') else 'eval',
                         'ear_threshold_ratio': args.ear_threshold_ratio if hasattr(args, 'ear_threshold_ratio') else 0.90,
                         'ear_baseline_init': args.ear_baseline_init if hasattr(args, 'ear_baseline_init') else 0.45,
-                        'risk_threshold': fusion.hi,
+                        'concentration_threshold': 1.0 - fusion.hi,  # 集中度閾値として記録
                     }, auto_name=args.auto_log_name if hasattr(args, 'auto_log_name') else True)
                     print(f"Logging started: {logger.path}")
             block_id = 1 if block_id is None else (block_id + 1)

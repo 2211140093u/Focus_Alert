@@ -95,7 +95,7 @@ class Overlay:
         gaze_color = (0, 0, 255) if gaze_off else (255, 255, 255)
         put(f"Gaze: {g['gaze_horiz']:.2f} | Off: {'YES' if gaze_off else 'NO'}", gaze_color)
 
-        # リスクスコアのバー表示（横長モードでは大きく、情報パネル内に配置）
+        # 集中度スコアのバー表示（横長モードでは大きく、情報パネル内に配置）
         if landscape_mode:
             # 横長モードでは情報パネルの下部に配置
             bar_x = panel_x + 5
@@ -108,11 +108,13 @@ class Overlay:
             bar_w = panel_w - 10
             bar_h = 15
         
-        bar_fill_w = int(bar_w * max(0.0, min(1.0, score)))
+        # 集中度スコアを計算（1.0 - リスクスコア）
+        concentration = 1.0 - score
+        bar_fill_w = int(bar_w * max(0.0, min(1.0, concentration)))
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (80,80,80), 1)
         cv2.rectangle(vis, (bar_x, bar_y), (bar_x + bar_fill_w, bar_y + bar_h), 
                      (0,0,255) if alert else (0,255,0), -1)
-        score_text = f"Risk: {score:.2f}"
+        score_text = f"Concentration: {concentration:.2f}"
         score_font_scale = 0.7 if landscape_mode else font_scale
         text_size = cv2.getTextSize(score_text, cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, font_thickness)[0]
         cv2.putText(vis, score_text, (bar_x + (bar_w - text_size[0]) // 2, bar_y - 3), 
