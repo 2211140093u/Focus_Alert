@@ -246,8 +246,10 @@ def run_measurement(args, settings=None, rotate_display=False):
                 if x1 <= x <= x2 and y1 <= y <= y2:
                     if name == 'start':
                         key = ord('s')
-                    elif name == 'end':
+                    elif name == 'stop':
                         key = ord('e')
+                    elif name == 'new_block':
+                        key = ord('b')  # 'b' for new block
                     elif name == 'marker':
                         key = ord('m')
                     elif name == 'distract':
@@ -286,18 +288,27 @@ def run_measurement(args, settings=None, rotate_display=False):
                             'concentration_threshold': 1.0 - fusion.hi,  # 集中度閾値として記録
                         }, auto_name=args.auto_log_name if hasattr(args, 'auto_log_name') else True)
                         print(f"Logging started: {logger.path}")
-                # ブロックIDを設定（新規ブロック開始）
-                block_id = 1 if block_id is None else (block_id + 1)
+                # 最初のブロックを開始
+                block_id = 1
                 is_recording = True
                 if logger:
                     logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
                 print(f"Recording started - Block {block_id}")
         if key == ord('e'):
-            # 「記録終了」ボタンが押されたとき
+            # 「記録停止」ボタンが押されたとき
             if is_recording and logger:
                 logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
                 is_recording = False
                 print(f"Recording stopped - Block {block_id} ended")
+        if key == ord('b'):
+            # 「新しいブロック」ボタンが押されたとき（記録中のみ有効）
+            if is_recording and logger:
+                # 現在のブロックを終了
+                logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
+                # 新しいブロックを開始
+                block_id = block_id + 1
+                logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+                print(f"New block started - Block {block_id}")
         if key == ord('m'):
             if logger:
                 logger.write_event('marker', block_id=block_id)
