@@ -61,10 +61,12 @@ class Overlay:
         if is_recording:
             rec_text = f"RECORDING"
             if block_id is not None:
-                rec_text += f" - Block {block_id}"
+                rec_text += f" - Block {int(block_id)}"
             rec_color = (0, 0, 255)  # 赤色
         else:
             rec_text = "STOPPED"
+            if block_id is not None:
+                rec_text += f" - Block {int(block_id)}"
             rec_color = (100, 100, 100)  # 灰色
         
         # 計測状態を大きく表示
@@ -174,9 +176,9 @@ class Overlay:
             pad = 4     # ボタン間の隙間
             
             labels = [
-                ('start', 'START'), ('end', 'STOP'),
-                ('marker', 'MARK'), ('distract', 'DIST'),
-                ('calib', 'CALIB'), ('quit', 'QUIT'),
+                ('start', 'START'), ('stop', 'STOP'),
+                ('new_block', 'NEW BLOCK'), ('marker', 'MARK'),
+                ('distract', 'DIST'), ('calib', 'CALIB'), ('quit', 'QUIT'),
             ]
             
             # 配置の開始基準位置（画面の一番下から少し上にマージン）
@@ -198,11 +200,16 @@ class Overlay:
                         color = (40, 40, 40)  # 記録中は無効化（暗く）
                     else:
                         color = (0, 150, 0)  # 緑色（開始可能）
-                elif key == 'end':
+                elif key == 'stop':
                     if is_recording:
                         color = (0, 0, 150)  # 赤色（停止可能）
                     else:
                         color = (40, 40, 40)  # 停止中は無効化（暗く）
+                elif key == 'new_block':
+                    if is_recording:
+                        color = (150, 100, 0)  # オレンジ色（新しいブロック開始可能）
+                    else:
+                        color = (40, 40, 40)  # 記録中でない場合は無効化
                 elif states and key == 'distract' and states.get('distract_on', False):
                     color = (0, 120, 255) # アクティブ時
                 elif key == 'quit':
@@ -232,7 +239,8 @@ class Overlay:
         # 縦長モード：従来の2行×3列レイアウト
         labels = [
             ('start', 'Start'),
-            ('end', 'End'),
+            ('stop', 'Stop'),
+            ('new_block', 'New Block'),
             ('marker', 'Mark'),
             ('distract', 'Dist'),
             ('calib', 'Calib'),
@@ -242,7 +250,7 @@ class Overlay:
         # ボタンサイズと配置
         pad = 4
         cols = 3
-        rows = 2
+        rows = 3  # 行数を増やす
         bw = (w - pad * (cols + 1)) // cols
         bh = 40  # タッチしやすいサイズ
         button_area_h = rows * bh + pad * (rows + 1)
@@ -259,11 +267,25 @@ class Overlay:
             
             # ボタンの状態に応じた色
             color = (60, 60, 60)
-            active = False
-            if states and key == 'distract':
+            if key == 'start':
+                if is_recording:
+                    color = (40, 40, 40)  # 記録中は無効化（暗く）
+                else:
+                    color = (0, 150, 0)  # 緑色（開始可能）
+            elif key == 'stop':
+                if is_recording:
+                    color = (0, 0, 150)  # 赤色（停止可能）
+                else:
+                    color = (40, 40, 40)  # 停止中は無効化（暗く）
+            elif key == 'new_block':
+                if is_recording:
+                    color = (150, 100, 0)  # オレンジ色（新しいブロック開始可能）
+                else:
+                    color = (40, 40, 40)  # 記録中でない場合は無効化
+            elif states and key == 'distract':
                 active = bool(states.get('distract_on', False))
-            if active:
-                color = (0, 120, 255)
+                if active:
+                    color = (0, 120, 255)
             elif key == 'quit':
                 color = (60, 60, 120)  # Quitボタンは少し違う色
             

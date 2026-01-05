@@ -11,7 +11,7 @@ import seaborn as sns
 sns.set_context("talk")
 
 
-def b64_png(fig, dpi=400):
+def b64_png(fig, dpi=600):
     """高解像度でPNG画像をBase64エンコード"""
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
@@ -64,7 +64,7 @@ def load_log(path: str):
     return frames, events
 
 
-def figure_concentration(frames: pd.DataFrame, title: str, dpi=400):
+def figure_concentration(frames: pd.DataFrame, title: str, dpi=600):
     """集中度スコアの時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -97,7 +97,7 @@ def figure_concentration(frames: pd.DataFrame, title: str, dpi=400):
     fig.tight_layout()
     return fig
 
-def figure_ear(frames: pd.DataFrame, title: str, dpi=400):
+def figure_ear(frames: pd.DataFrame, title: str, dpi=600):
     """EAR（Eye Aspect Ratio）の時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -125,7 +125,7 @@ def figure_ear(frames: pd.DataFrame, title: str, dpi=400):
     fig.tight_layout()
     return fig
 
-def figure_gaze(frames: pd.DataFrame, title: str, dpi=400):
+def figure_gaze(frames: pd.DataFrame, title: str, dpi=600):
     """視線（Gaze）の時系列グラフ（個別画像）"""
     fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
     t = frames["ts"].values
@@ -423,22 +423,22 @@ def main():
         except Exception:
             meta_row = {}
         sess_title = f"{Path(lp).name}"
-        # 図表の生成（高解像度で生成：dpi=400）
+        # 図表の生成（高解像度で生成：dpi=600）
         # 時系列グラフを3つの別々の画像として生成
-        concentration_fig = figure_concentration(frames, title=sess_title, dpi=400)
-        concentration_b64 = b64_png(concentration_fig, dpi=400)
-        ear_fig = figure_ear(frames, title=sess_title, dpi=400)
-        ear_b64 = b64_png(ear_fig, dpi=400)
-        gaze_fig = figure_gaze(frames, title=sess_title, dpi=400)
-        gaze_b64 = b64_png(gaze_fig, dpi=400)
+        concentration_fig = figure_concentration(frames, title=sess_title, dpi=600)
+        concentration_b64 = b64_png(concentration_fig, dpi=600)
+        ear_fig = figure_ear(frames, title=sess_title, dpi=600)
+        ear_b64 = b64_png(ear_fig, dpi=600)
+        gaze_fig = figure_gaze(frames, title=sess_title, dpi=600)
+        gaze_b64 = b64_png(gaze_fig, dpi=600)
         
         hist_fig = figure_histograms(frames, title=sess_title)
-        hist_b64 = b64_png(hist_fig, dpi=400)
+        hist_b64 = b64_png(hist_fig, dpi=600)
         # 視線の2次元表示
         imgs = [concentration_b64, ear_b64, gaze_b64, hist_b64]
         if 'gaze_y' in frames.columns:
-            scat = b64_png(figure_gaze_scatter(frames, title=sess_title), dpi=400)
-            heat = b64_png(figure_gaze_heatmap(frames, title=sess_title), dpi=400)
+            scat = b64_png(figure_gaze_scatter(frames, title=sess_title), dpi=600)
+            heat = b64_png(figure_gaze_heatmap(frames, title=sess_title), dpi=600)
             imgs.extend([scat, heat])
         # サマリ統計
         summ = summarize(frames)

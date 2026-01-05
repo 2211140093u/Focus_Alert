@@ -82,26 +82,9 @@ def main():
         except Exception as e:
             print('Failed to load model:', e)
     overlay = Overlay()
-    # ログファイルの自動命名（ディレクトリのみ指定、または未指定の場合）
-    log_path = args.log if args.log else ('logs' if args.auto_log_name else None)
-    logger = CSVLogger(log_path, meta={
-        'session': args.session,
-        'participant': args.participant,
-        'task': args.task,
-        'phase': args.phase,
-        'calib_seconds': args.calib_seconds,
-        'model_load': args.model_load,
-        'learning': args.learning,
-        'backend': args.backend,
-        'rotate': args.rotate,
-        'flip_h': args.flip_h,
-        'flip_v': args.flip_v,
-        'ear_threshold_ratio': args.ear_threshold_ratio,
-        'ear_baseline_init': args.ear_baseline_init,
-    }, auto_name=args.auto_log_name) if log_path else None
-    
-    if logger:
-        print(f"Logging to: {logger.path}")
+    # ログファイルは「記録開始」ボタンが押されたときに作成される
+    # ここではloggerをNoneに設定（後で作成される）
+    logger = None
 
     last_alert_time = 0.0
     cooldown_sec = 60.0
@@ -262,8 +245,10 @@ def main():
                 if x1 <= x <= x2 and y1 <= y <= y2:
                     if name == 'start':
                         key = ord('s')
-                    elif name == 'end':
+                    elif name == 'stop':
                         key = ord('e')
+                    elif name == 'new_block':
+                        key = ord('b')  # 'b' for new block
                     elif name == 'marker':
                         key = ord('m')
                     elif name == 'distract':
@@ -288,18 +273,47 @@ def main():
                 blink.close_frames = 0
                 blink.long_close_frames = 0
                 blink.closed = False
-                # 新しいブロックを開始
-                block_id = 1 if block_id is None else (block_id + 1)
+                # loggerがまだ作成されていない場合は作成
+                if logger is None:
+                    log_path = args.log if args.log else ('logs' if args.auto_log_name else None)
+                    if log_path:
+                        logger = CSVLogger(log_path, meta={
+                            'session': args.session,
+                            'participant': args.participant,
+                            'task': args.task,
+                            'phase': args.phase,
+                            'calib_seconds': args.calib_seconds,
+                            'model_load': args.model_load,
+                            'learning': args.learning,
+                            'backend': args.backend,
+                            'rotate': args.rotate,
+                            'flip_h': args.flip_h,
+                            'flip_v': args.flip_v,
+                            'ear_threshold_ratio': args.ear_threshold_ratio,
+                            'ear_baseline_init': args.ear_baseline_init,
+                        }, auto_name=args.auto_log_name)
+                        print(f"Logging started: {logger.path}")
+                # 最初のブロックを開始
+                block_id = 1
                 is_recording = True
                 if logger:
                     logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
                 print(f"Recording started - Block {block_id}")
         if key == ord('e'):
-            # 「記録終了」ボタンが押されたとき
+            # 「記録停止」ボタンが押されたとき
             if is_recording and logger:
                 logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
                 is_recording = False
                 print(f"Recording stopped - Block {block_id} ended")
+        if key == ord('b'):
+            # 「新しいブロック」ボタンが押されたとき（記録中のみ有効）
+            if is_recording and logger:
+                # 現在のブロックを終了
+                logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
+                # 新しいブロックを開始
+                block_id = block_id + 1
+                logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+                print(f"New block started - Block {block_id}")
         if key == ord('m'):
             if logger:
                 logger.write_event('marker', block_id=block_id)
