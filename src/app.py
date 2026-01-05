@@ -108,6 +108,7 @@ def main():
     alert_enabled = (args.alert_mode == 'on')
     block_id = None
     distractor_on = False
+    is_recording = False  # 記録中フラグ
 
     # マウス/タッチ入力の取得
     last_click = {'x': None, 'y': None, 'ts': 0}
@@ -212,9 +213,9 @@ def main():
         
         vis = overlay.draw(frame, feats, score, alert, fps, status=status, 
                           show_alert_text=alert_enabled, cam_status=cam_status,
-                          landscape_mode=landscape_mode)
+                          landscape_mode=landscape_mode, is_recording=is_recording, block_id=block_id)
         btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on},
-                                        landscape_mode=landscape_mode)
+                                        landscape_mode=landscape_mode, is_recording=is_recording)
 
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
@@ -280,13 +281,25 @@ def main():
             if logger:
                 logger.write_event('calibrate_center', block_id=block_id)
         if key == ord('s'):
-            # 新しいブロックを開始
-            block_id = 1 if block_id is None else (block_id + 1)
-            if logger:
-                logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+            # 「記録開始」ボタンが押されたとき
+            if not is_recording:
+                # カウントを初期化
+                blink.blinks = 0
+                blink.close_frames = 0
+                blink.long_close_frames = 0
+                blink.closed = False
+                # 新しいブロックを開始
+                block_id = 1 if block_id is None else (block_id + 1)
+                is_recording = True
+                if logger:
+                    logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+                print(f"Recording started - Block {block_id}")
         if key == ord('e'):
-            if logger:
+            # 「記録終了」ボタンが押されたとき
+            if is_recording and logger:
                 logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
+                is_recording = False
+                print(f"Recording stopped - Block {block_id} ended")
         if key == ord('m'):
             if logger:
                 logger.write_event('marker', block_id=block_id)

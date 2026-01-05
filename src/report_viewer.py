@@ -157,11 +157,12 @@ class ReportViewer:
                             self._current_image_path = image_path
                             self._split_part_idx = 0
                         
-                        # 時系列グラフ（タイトルに「時系列グラフ」が含まれる）は分割せず、1枚の画像として表示
-                        is_timeseries = '時系列グラフ' in page_title or 'Timeseries' in page_title
+                        # 時系列グラフは分割せず、1枚の画像として表示（高解像度で表示）
+                        is_timeseries = 'Time Series' in page_title or 'Timeseries' in page_title or '時系列' in page_title
                         
                         # 横長グラフ（アスペクト比 > 2.0）の場合、時系列グラフ以外は縦に3分割して表示
-                        if aspect_ratio > 2.0 and not is_timeseries:
+                        # ただし、時系列グラフは個別画像として生成されているので、分割不要
+                        if aspect_ratio > 2.0 and not is_timeseries and False:  # 分割機能は無効化
                             # 横長グラフを3つに分割
                             part_w = img_w // 3
                             part_idx = self._split_part_idx  # 現在表示する部分（0, 1, 2）
@@ -196,51 +197,73 @@ class ReportViewer:
                             cv2.putText(img, split_text, (10, self.height - 60), 
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
                         else:
-                            # 通常の画像（縦長または正方形）は拡大縮小対応
-                            # 基本スケールを計算
+                            # 高解像度画像の表示（拡大縮小対応、パン機能付き）
+                            # 基本スケールを計算（画面に収まるサイズ）
                             base_scale = min(content_w / img_w, content_h / img_h)
                             # 拡大縮小スケールを適用
                             scale = base_scale * self._zoom_scale
-                            new_w = int(img_w * scale)
-                            new_h = int(img_h * scale)
                             
-                            resized = cv2.resize(page_img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+                            # 元画像から直接切り出して表示（高解像度を維持）
+                            # 表示領域のサイズ
+                            display_w = content_w
+                            display_h = content_h
                             
-                            # 中央配置（拡大時はオフセットを考慮）
-                            x_offset = (content_w - new_w) // 2 + 10 + self._zoom_offset_x
-                            y_offset = content_y + (content_h - new_h) // 2 + self._zoom_offset_y
+                            # 元画像上の表示領域を計算（オフセットを考慮）
+                            # 拡大時のオフセットを元画像座標系に変換
+                            img_offset_x = -self._zoom_offset_x / scale
+                            img_offset_y = -self._zoom_offset_y / scale
                             
-                            # 画像の表示範囲を計算（画面内に収まるように）
-                            display_x1 = max(10, x_offset)
-                            display_y1 = max(content_y, y_offset)
-                            display_x2 = min(self.width - 10, x_offset + new_w)
-                            display_y2 = min(self.height - 60, y_offset + new_h)
+                            # 元画像の中心を基準に表示領域を計算
+                            center_x = img_w / 2
+                            center_y = img_h / 2
                             
-                            # 元画像からの切り出し位置を計算
-                            src_x1 = max(0, (10 - x_offset) / scale) if x_offset < 10 else 0
-                            src_y1 = max(0, (content_y - y_offset) / scale) if y_offset < content_y else 0
-                            src_x2 = min(img_w, (self.width - 10 - x_offset) / scale) if x_offset + new_w > self.width - 10 else img_w
-                            src_y2 = min(img_h, (self.height - 60 - y_offset) / scale) if y_offset + new_h > self.height - 60 else img_h
+                            # 表示領域の左上座標（元画像座標系）
+                            src_x1 = center_x - (display_w / scale) / 2 + img_offset_x
+                            src_y1 = center_y - (display_h / scale) / 2 + img_offset_y
+                            
+                            # 表示領域の右下座標
+                            src_x2 = src_x1 + (display_w / scale)
+                            src_y2 = src_y1 + (display_h / scale)
+                            
+                            # 元画像の範囲内に制限
+                            src_x1 = max(0, int(src_x1))
+                            src_y1 = max(0, int(src_y1))
+                            src_x2 = min(img_w, int(src_x2))
+                            src_y2 = min(img_h, int(src_y2))
                             
                             # 切り出し
                             if src_x2 > src_x1 and src_y2 > src_y1:
-                                src_w = int(src_x2 - src_x1)
-                                src_h = int(src_y2 - src_y1)
-                                src_img = resized[int(src_y1*scale):int(src_y2*scale), int(src_x1*scale):int(src_x2*scale)]
+                                src_w = src_x2 - src_x1
+                                src_h = src_y2 - src_y1
                                 
-                                # 表示サイズに合わせてリサイズ
+                                # 元画像から切り出し
+                                src_img = page_img[src_y1:src_y2, src_x1:src_x2]
+                                
+                                # 表示サイズにリサイズ（高品質な補間を使用）
                                 if src_w > 0 and src_h > 0:
-                                    display_w = display_x2 - display_x1
-                                    display_h = display_y2 - display_y1
-                                    if display_w > 0 and display_h > 0:
-                                        final_img = cv2.resize(src_img, (display_w, display_h), interpolation=cv2.INTER_LINEAR)
-                                        img[display_y1:display_y2, display_x1:display_x2] = final_img
+                                    # 拡大時はLANCZOS4、縮小時はLINEARを使用
+                                    interpolation = cv2.INTER_LANCZOS4 if scale > 1.0 else cv2.INTER_LINEAR
+                                    final_img = cv2.resize(src_img, (display_w, display_h), interpolation=interpolation)
+                                    
+                                    # 表示位置
+                                    display_x1 = 10
+                                    display_y1 = content_y
+                                    
+                                    # 画像を配置
+                                    if (display_y1 + display_h <= self.height and display_x1 + display_w <= self.width and
+                                        display_y1 >= 0 and display_x1 >= 0):
+                                        img[display_y1:display_y1+display_h, display_x1:display_x1+display_w] = final_img
                             
                             # 拡大縮小インジケーター
                             if self._zoom_scale != 1.0:
                                 zoom_text = f"Zoom: {self._zoom_scale:.1f}x"
                                 cv2.putText(img, zoom_text, (10, self.height - 60), 
                                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1, cv2.LINE_AA)
+                            
+                            # パン可能な範囲を表示（デバッグ用、必要に応じて削除）
+                            # pan_text = f"Pan: ({self._zoom_offset_x}, {self._zoom_offset_y})"
+                            # cv2.putText(img, pan_text, (10, self.height - 40), 
+                            #            cv2.FONT_HERSHEY_SIMPLEX, 0.3, (150, 150, 150), 1, cv2.LINE_AA)
                 except Exception as e:
                     cv2.putText(img, f"Image Load Error: {e}", (10, content_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         
@@ -396,20 +419,29 @@ class ReportViewer:
                     self._zoom_offset_y = 0
                     return None
                 elif name == 'pan_up':
-                    # 上に移動
-                    self._zoom_offset_y += 20
+                    # 上に移動（拡大時のみ有効、移動量を拡大率に応じて調整）
+                    if self._zoom_scale > 1.0:
+                        # 拡大率に応じて移動量を増やす（最大100ピクセル）
+                        move_amount = min(100, int(30 * self._zoom_scale))
+                        self._zoom_offset_y += move_amount
                     return None
                 elif name == 'pan_down':
                     # 下に移動
-                    self._zoom_offset_y -= 20
+                    if self._zoom_scale > 1.0:
+                        move_amount = min(100, int(30 * self._zoom_scale))
+                        self._zoom_offset_y -= move_amount
                     return None
                 elif name == 'pan_left':
                     # 左に移動
-                    self._zoom_offset_x += 20
+                    if self._zoom_scale > 1.0:
+                        move_amount = min(100, int(30 * self._zoom_scale))
+                        self._zoom_offset_x += move_amount
                     return None
                 elif name == 'pan_right':
                     # 右に移動
-                    self._zoom_offset_x -= 20
+                    if self._zoom_scale > 1.0:
+                        move_amount = min(100, int(30 * self._zoom_scale))
+                        self._zoom_offset_x -= move_amount
                     return None
         return None
     

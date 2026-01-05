@@ -136,7 +136,8 @@ trap cleanup INT TERM
 # APP_PIDを監視し、終了したらPROXY_PIDも終了
 (
     while kill -0 $APP_PID 2>/dev/null; do
-        sleep 1
+        # I/Oエラー対策: sleepコマンドのエラーを無視
+        /bin/sleep 1 2>/dev/null || break
     done
     echo "[launcher] App process ended, stopping camera proxy..."
     kill $PROXY_PID 2>/dev/null || true

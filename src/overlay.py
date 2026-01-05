@@ -5,7 +5,7 @@ class Overlay:
     def __init__(self):
         pass
 
-    def draw(self, frame, feats, score, alert, fps, status=None, show_alert_text=True, cam_status=None, landscape_mode=False):
+    def draw(self, frame, feats, score, alert, fps, status=None, show_alert_text=True, cam_status=None, landscape_mode=False, is_recording=False, block_id=None):
         vis = frame.copy()
         h, w = vis.shape[:2]
         
@@ -56,7 +56,31 @@ class Overlay:
         font_scale = 0.45 if landscape_mode else 0.4
         font_thickness = 1 
         line_height = 24 if landscape_mode else 18
-        curr_y = panel_y + 20
+        
+        # 計測状態表示（大きく目立つように）
+        if is_recording:
+            rec_text = f"RECORDING"
+            if block_id is not None:
+                rec_text += f" - Block {block_id}"
+            rec_color = (0, 0, 255)  # 赤色
+        else:
+            rec_text = "STOPPED"
+            rec_color = (100, 100, 100)  # 灰色
+        
+        # 計測状態を大きく表示
+        rec_font_scale = 0.6 if landscape_mode else 0.5
+        rec_font_thickness = 2
+        rec_text_size = cv2.getTextSize(rec_text, cv2.FONT_HERSHEY_SIMPLEX, rec_font_scale, rec_font_thickness)[0]
+        rec_x = panel_x + (panel_w - rec_text_size[0]) // 2
+        rec_y = panel_y + 25
+        # 背景を描画
+        cv2.rectangle(vis, (rec_x - 5, rec_y - rec_text_size[1] - 5), 
+                     (rec_x + rec_text_size[0] + 5, rec_y + 5), (0, 0, 0), -1)
+        cv2.putText(vis, rec_text, (rec_x, rec_y), cv2.FONT_HERSHEY_SIMPLEX, 
+                   rec_font_scale, rec_color, rec_font_thickness, cv2.LINE_AA)
+        
+        # その他の情報表示の開始位置
+        curr_y = rec_y + rec_text_size[1] + 15
         
         def put(t, color=(255,255,255)):
             nonlocal curr_y
@@ -137,7 +161,7 @@ class Overlay:
         
         return vis
 
-    def draw_buttons(self, frame, states=None, landscape_mode=False):
+    def draw_buttons(self, frame, states=None, landscape_mode=False, is_recording=False):
         vis = frame
         h, w = vis.shape[:2]
         
@@ -169,7 +193,17 @@ class Overlay:
                 
                 # ボタンの色設定
                 color = (60, 60, 60)
-                if states and key == 'distract' and states.get('distract_on', False):
+                if key == 'start':
+                    if is_recording:
+                        color = (40, 40, 40)  # 記録中は無効化（暗く）
+                    else:
+                        color = (0, 150, 0)  # 緑色（開始可能）
+                elif key == 'end':
+                    if is_recording:
+                        color = (0, 0, 150)  # 赤色（停止可能）
+                    else:
+                        color = (40, 40, 40)  # 停止中は無効化（暗く）
+                elif states and key == 'distract' and states.get('distract_on', False):
                     color = (0, 120, 255) # アクティブ時
                 elif key == 'quit':
                     color = (50, 50, 150) # 終了ボタン

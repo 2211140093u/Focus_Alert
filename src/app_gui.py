@@ -71,6 +71,7 @@ def run_measurement(args, settings=None, rotate_display=False):
     alert_enabled = (args.alert_mode == 'on')
     block_id = None
     distractor_on = False
+    is_recording = False  # 記録中フラグ
     
     # マウス/タッチ入力
     last_click = {'x': None, 'y': None, 'ts': 0}
@@ -177,8 +178,9 @@ def run_measurement(args, settings=None, rotate_display=False):
         landscape_mode = (display_width == 480 and display_height == 320)
         
         vis = overlay.draw(frame, feats, score, alert, fps, status=status, 
-                          show_alert_text=alert_enabled, cam_status=cam_status, landscape_mode=landscape_mode)
-        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on}, landscape_mode=landscape_mode)
+                          show_alert_text=alert_enabled, cam_status=cam_status, landscape_mode=landscape_mode,
+                          is_recording=is_recording, block_id=block_id)
+        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on}, landscape_mode=landscape_mode, is_recording=is_recording)
         
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
@@ -263,26 +265,39 @@ def run_measurement(args, settings=None, rotate_display=False):
             if logger:
                 logger.write_event('calibrate_center', block_id=block_id)
         if key == ord('s'):
-            # 「記録開始」ボタンが押されたとき、loggerがまだ作成されていない場合は作成
-            if logger is None:
-                log_path = args.log if hasattr(args, 'log') and args.log else ('logs' if args.auto_log_name else None)
-                if log_path:
-                    logger = CSVLogger(log_path, meta={
-                        'session': args.session if hasattr(args, 'session') else None,
-                        'participant': args.participant if hasattr(args, 'participant') else None,
-                        'task': args.task if hasattr(args, 'task') else None,
-                        'phase': args.phase if hasattr(args, 'phase') else 'eval',
-                        'ear_threshold_ratio': args.ear_threshold_ratio if hasattr(args, 'ear_threshold_ratio') else 0.90,
-                        'ear_baseline_init': args.ear_baseline_init if hasattr(args, 'ear_baseline_init') else 0.45,
-                        'concentration_threshold': 1.0 - fusion.hi,  # 集中度閾値として記録
-                    }, auto_name=args.auto_log_name if hasattr(args, 'auto_log_name') else True)
-                    print(f"Logging started: {logger.path}")
-            block_id = 1 if block_id is None else (block_id + 1)
-            if logger:
-                logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+            # 「記録開始」ボタンが押されたとき
+            if not is_recording:
+                # カウントを初期化
+                blink.blinks = 0
+                blink.close_frames = 0
+                blink.long_close_frames = 0
+                blink.closed = False
+                # loggerがまだ作成されていない場合は作成
+                if logger is None:
+                    log_path = args.log if hasattr(args, 'log') and args.log else ('logs' if args.auto_log_name else None)
+                    if log_path:
+                        logger = CSVLogger(log_path, meta={
+                            'session': args.session if hasattr(args, 'session') else None,
+                            'participant': args.participant if hasattr(args, 'participant') else None,
+                            'task': args.task if hasattr(args, 'task') else None,
+                            'phase': args.phase if hasattr(args, 'phase') else 'eval',
+                            'ear_threshold_ratio': args.ear_threshold_ratio if hasattr(args, 'ear_threshold_ratio') else 0.90,
+                            'ear_baseline_init': args.ear_baseline_init if hasattr(args, 'ear_baseline_init') else 0.45,
+                            'concentration_threshold': 1.0 - fusion.hi,  # 集中度閾値として記録
+                        }, auto_name=args.auto_log_name if hasattr(args, 'auto_log_name') else True)
+                        print(f"Logging started: {logger.path}")
+                # ブロックIDを設定（新規ブロック開始）
+                block_id = 1 if block_id is None else (block_id + 1)
+                is_recording = True
+                if logger:
+                    logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+                print(f"Recording started - Block {block_id}")
         if key == ord('e'):
-            if logger:
+            # 「記録終了」ボタンが押されたとき
+            if is_recording and logger:
                 logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
+                is_recording = False
+                print(f"Recording stopped - Block {block_id} ended")
         if key == ord('m'):
             if logger:
                 logger.write_event('marker', block_id=block_id)
