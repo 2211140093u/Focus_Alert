@@ -188,7 +188,7 @@ class OptionsMenu:
         self.settings = settings or {
             'ear_threshold_ratio': 0.90,
             'ear_baseline_init': 0.45,
-            'risk_threshold': 0.55,
+            'concentration_threshold': 0.45,  # 集中度スコアの閾値（1.0 - risk_threshold）
             'cooldown_sec': 60.0,
         }
         self.selected_param = None
@@ -249,7 +249,7 @@ class OptionsMenu:
         params = [
             ('ear_threshold_ratio', 'EAR Threshold', 0.70, 0.98),
             ('ear_baseline_init', 'EAR Baseline', 0.30, 0.60),
-            ('risk_threshold', 'Risk Threshold', 0.40, 0.70),
+            ('concentration_threshold', 'Concentration Threshold', 0.30, 0.60),
             ('cooldown_sec', 'Cooldown (sec)', 30.0, 120.0),
         ]
         
@@ -369,9 +369,9 @@ class OptionsMenu:
         elif key == 'ear_baseline_init':
             step = 0.01
             min_val, max_val = 0.30, 0.60
-        elif key == 'risk_threshold':
+        elif key == 'concentration_threshold':
             step = 0.01
-            min_val, max_val = 0.40, 0.70
+            min_val, max_val = 0.30, 0.60
         elif key == 'cooldown_sec':
             step = 5.0
             min_val, max_val = 30.0, 120.0
@@ -393,6 +393,11 @@ class OptionsMenu:
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 loaded = json.load(f)
+                # 後方互換性: risk_thresholdをconcentration_thresholdに変換
+                if 'risk_threshold' in loaded and 'concentration_threshold' not in loaded:
+                    loaded['concentration_threshold'] = 1.0 - loaded['risk_threshold']
+                    # 古いキーを削除（オプション）
+                    # del loaded['risk_threshold']
                 self.settings.update(loaded)
 
 

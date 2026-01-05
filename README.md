@@ -6,7 +6,7 @@
 
 - EAR（Eye Aspect Ratio）によるまばたき検出（開眼基準の適応: EWMA、相対しきい値、瞬目カウント、長時間閉眼の検出）
 - 虹彩ランドマークを用いた視線オフセット（平滑化、中心キャリブレーション、逸脱レベルEMA）
-- ヒステリシス/クールダウン付きのリスクスコアと画面オーバーレイ表示
+- ヒステリシス/クールダウン付きの集中度スコアと画面オーバーレイ表示
 - CSV記録（frame/event/meta）、実験用ホットキー、解析ノートブック（AUC・F1・遅延）
 - 3.5インチタッチモニタ（320×480）対応の最適化されたUI
 - リアルタイムカメラ状態表示
@@ -93,7 +93,7 @@ python src/app.py --cam 0 --width 640 --height 480 --log logs/test.csv
 - Face/Iris 検出状態
 - EAR（現在値）、Blinks（まばたき回数）
 - Gaze（視線方向・逸脱状態）
-- Risk（リスクスコア）
+- Concentration（集中度スコア）
 
 ### ボタン（下部）
 - Start: ブロック開始
@@ -106,7 +106,7 @@ python src/app.py --cam 0 --width 640 --height 480 --log logs/test.csv
 ## Logging（CSV）
 
 - 行種別: meta / event / frame
-- 代表カラム: `ts,row_type,session,participant,task,phase,block_id,ear,ear_base,ear_thr,blink_count,is_closed,long_close,gaze,gaze_thr,gaze_bias,gaze_offlvl,risk,alert,event,info`
+- 代表カラム: `ts,row_type,session,participant,task,phase,block_id,ear,ear_base,ear_thr,blink_count,is_closed,long_close,gaze,gaze_thr,gaze_bias,gaze_offlvl,risk,concentration,alert,event,info`
 - `event`: `block_start/end`, `marker`, `distractor_start/end`, `calibrate_center` など
 
 ## Reports
@@ -150,7 +150,7 @@ python scripts/report.py --log logs/pc_test.csv --out reports/report.html
 - [Raspberry Piセットアップガイド](docs/RASPBERRY_PI_SETUP.md) - Raspberry Piでのワンタッチ起動設定
 - [レポート作成ガイド](docs/REPORT_GUIDE.md) - レポートの作成方法と記録項目の説明
 - [EARパラメータの詳細説明](docs/EAR_PARAMETERS.md) - EAR閾値と基準値の調整方法
-- [リスクスコアの判定方法](docs/RISK_SCORE.md) - リスクスコアの計算と判定ロジック
+- [集中度スコアの判定方法](docs/RISK_SCORE.md) - 集中度スコアの計算と判定ロジック
 - [よくある質問（FAQ）](docs/FAQ.md) - よくある質問と回答
 - [質問への回答まとめ](docs/ANSWERS.md) - 詳細な質問への回答
 - [セットアップ手順まとめ](docs/SUMMARY.md) - 全手順の概要

@@ -24,8 +24,8 @@ for /f "tokens=1-2 delims=/:" %%a in ('time /t') do set mytime=%%a%%b
 set mytime=%mytime: =0%
 set timestamp=%mydate%_%mytime%
 
-REM アプリを起動（高解像度で起動）
-python src/app.py --cam 0 --width 1280 --height 720 --log logs\pc_%timestamp%.csv
+REM アプリを起動（横長モード480x320で起動、Pi版と同じレイアウト）
+python src/app.py --cam 0 --width 640 --height 480 --display-width 480 --display-height 320 --log logs\pc_%timestamp%.csv
 
 pause
 

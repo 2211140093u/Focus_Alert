@@ -11,7 +11,8 @@ import seaborn as sns
 sns.set_context("talk")
 
 
-def b64_png(fig, dpi=200):
+def b64_png(fig, dpi=400):
+    """高解像度でPNG画像をBase64エンコード"""
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(fig)
@@ -63,8 +64,101 @@ def load_log(path: str):
     return frames, events
 
 
+def figure_concentration(frames: pd.DataFrame, title: str, dpi=400):
+    """集中度スコアの時系列グラフ（個別画像）"""
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
+    t = frames["ts"].values
+    # リスクスコアを集中度スコアに変換（1.0 - risk）
+    concentration = 1.0 - frames["risk"]
+    ax.plot(t, concentration, label="Concentration", color="#1f77b4", linewidth=1.5)
+    if "alert" in frames:
+        a = frames[frames["alert"] > 0]
+        if len(a):
+            # アラート時の集中度スコアも変換
+            alert_concentration = 1.0 - a["risk"]
+            ax.scatter(a["ts"], alert_concentration, color="red", s=20, label="Alert", zorder=5)
+    # 注意分散区間を縦線でマーキング
+    if "distractor_active" in frames:
+        dmask = frames["distractor_active"].values
+        for i in range(1, len(dmask)):
+            if dmask[i] and not dmask[i-1]:
+                start = frames["ts"].iloc[i]
+                ax.axvline(start, color="orange", alpha=0.3, linestyle=":")
+            if not dmask[i] and dmask[i-1]:
+                end = frames["ts"].iloc[i]
+                ax.axvline(end, color="orange", alpha=0.3, linestyle=":")
+    ax.set_xlabel("Timestamp (s)", fontsize=12)
+    ax.set_ylabel("Concentration Score", fontsize=12)
+    ax.set_title(f"Concentration Score Time Series - {title}", fontsize=14, fontweight='bold')
+    ax.legend(loc="upper right", fontsize=10)
+    ax.grid(True, alpha=0.3)
+    # Y軸の範囲を0-1に設定（集中度スコアは0-1の範囲）
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    return fig
+
+def figure_ear(frames: pd.DataFrame, title: str, dpi=400):
+    """EAR（Eye Aspect Ratio）の時系列グラフ（個別画像）"""
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
+    t = frames["ts"].values
+    if "ear" in frames:
+        ax.plot(t, frames["ear"], label="EAR", color="#2ca02c", linewidth=1.5)
+    if "ear_base" in frames:
+        ax.plot(t, frames["ear_base"], label="EAR baseline", color="#98df8a", alpha=0.8, linewidth=1.2)
+    if "ear_thr" in frames:
+        ax.plot(t, frames["ear_thr"], label="EAR threshold", color="#d62728", alpha=0.6, linestyle="--", linewidth=1.2)
+    # 注意分散区間を縦線でマーキング
+    if "distractor_active" in frames:
+        dmask = frames["distractor_active"].values
+        for i in range(1, len(dmask)):
+            if dmask[i] and not dmask[i-1]:
+                start = frames["ts"].iloc[i]
+                ax.axvline(start, color="orange", alpha=0.3, linestyle=":")
+            if not dmask[i] and dmask[i-1]:
+                end = frames["ts"].iloc[i]
+                ax.axvline(end, color="orange", alpha=0.3, linestyle=":")
+    ax.set_xlabel("Timestamp (s)", fontsize=12)
+    ax.set_ylabel("EAR (Eye Aspect Ratio)", fontsize=12)
+    ax.set_title(f"EAR Time Series - {title}", fontsize=14, fontweight='bold')
+    ax.legend(loc="upper right", fontsize=10)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+def figure_gaze(frames: pd.DataFrame, title: str, dpi=400):
+    """視線（Gaze）の時系列グラフ（個別画像）"""
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=dpi)
+    t = frames["ts"].values
+    if "gaze" in frames:
+        ax.plot(t, frames["gaze"], label="Gaze (horizontal)", color="#9467bd", linewidth=1.5)
+    if "gaze_thr" in frames:
+        try:
+            thr = np.nanmedian(frames["gaze_thr"].values)
+            ax.axhline(thr, color="#c5b0d5", linestyle="--", label="Gaze threshold", linewidth=1.2)
+            ax.axhline(-thr, color="#c5b0d5", linestyle="--", linewidth=1.2)
+        except Exception:
+            pass
+    # 注意分散区間を縦線でマーキング
+    if "distractor_active" in frames:
+        dmask = frames["distractor_active"].values
+        for i in range(1, len(dmask)):
+            if dmask[i] and not dmask[i-1]:
+                start = frames["ts"].iloc[i]
+                ax.axvline(start, color="orange", alpha=0.3, linestyle=":")
+            if not dmask[i] and dmask[i-1]:
+                end = frames["ts"].iloc[i]
+                ax.axvline(end, color="orange", alpha=0.3, linestyle=":")
+    ax.set_xlabel("Timestamp (s)", fontsize=12)
+    ax.set_ylabel("Gaze Offset (normalized)", fontsize=12)
+    ax.set_title(f"Gaze Time Series - {title}", fontsize=14, fontweight='bold')
+    ax.legend(loc="upper right", fontsize=10)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
 def figure_timeseries(frames: pd.DataFrame, title: str, dpi=200):
-    # dpiを高く設定して高解像度で生成（拡大時も綺麗に表示）
+    """後方互換性のための関数（使用されない可能性があるが、念のため保持）"""
+    # この関数は使用されないが、後方互換性のため保持
     fig, axes = plt.subplots(3, 1, figsize=(14, 9), sharex=True, dpi=dpi)
     t = frames["ts"].values
     # リスク
@@ -154,8 +248,10 @@ def figure_gaze_heatmap(frames: pd.DataFrame, title: str, bins=50):
 
 def figure_histograms(frames: pd.DataFrame, title: str):
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
-    sns.histplot(frames["risk"], bins=40, ax=axes[0], color="#1f77b4")
-    axes[0].set_title("Risk distribution")
+    # リスクスコアを集中度スコアに変換（1.0 - risk）
+    concentration = 1.0 - frames["risk"]
+    sns.histplot(concentration, bins=40, ax=axes[0], color="#1f77b4")
+    axes[0].set_title("Concentration distribution")
     if "ear" in frames:
         sns.histplot(frames["ear"], bins=40, ax=axes[1], color="#2ca02c")
         axes[1].set_title("EAR distribution")
@@ -170,8 +266,14 @@ def figure_histograms(frames: pd.DataFrame, title: str):
 def summarize(frames: pd.DataFrame):
     s = {}
     s["frames"] = len(frames)
-    s["risk_mean"] = float(np.nanmean(frames.get("risk", pd.Series(dtype=float))))
-    s["risk_p95"] = float(np.nanpercentile(frames.get("risk", pd.Series(dtype=float)), 95)) if "risk" in frames else np.nan
+    # リスクスコアを集中度スコアに変換（1.0 - risk）
+    risk_series = frames.get("risk", pd.Series(dtype=float))
+    concentration_series = 1.0 - risk_series
+    s["concentration_mean"] = float(np.nanmean(concentration_series))
+    s["concentration_p95"] = float(np.nanpercentile(concentration_series, 95)) if len(concentration_series) > 0 else np.nan
+    # 後方互換性のため、risk_meanとrisk_p95も保持（集中度スコアから逆算）
+    s["risk_mean"] = 1.0 - s["concentration_mean"]
+    s["risk_p95"] = 1.0 - s["concentration_p95"] if not np.isnan(s["concentration_p95"]) else np.nan
     if "blink_count" in frames:
         s["blink_count_max"] = int(frames["blink_count"].max())
     s["long_close_count"] = int(frames.get("long_close", pd.Series([0])).sum()) if "long_close" in frames else 0
@@ -219,13 +321,14 @@ def save_report_images(sections, image_dir, html_path):
     
     # 画像ページ（各グラフを1ページずつ）
     image_b64_list = section.get('images', [])
-    image_types = ['時系列グラフ', '分布ヒストグラム', '視線散布図', '視線ヒートマップ']
+    # 時系列グラフは3つに分割されているので、タイトルも3つに分ける
+    image_types = ['Concentration Time Series', 'EAR Time Series', 'Gaze Time Series', 'Distribution Histograms', 'Gaze Scatter', 'Gaze Heatmap']
     
     for img_idx, img_b64 in enumerate(image_b64_list):
         if img_idx < len(image_types):
             img_title_base = f"{section['title']} - {image_types[img_idx]}"
         else:
-            img_title_base = f"{section['title']} - グラフ{img_idx + 1}"
+            img_title_base = f"{section['title']} - Graph {img_idx + 1}"
         
         # Base64デコード
         try:
@@ -236,14 +339,13 @@ def save_report_images(sections, image_dir, html_path):
             
             # PILで画像を読み込み
             pil_img = Image.open(io.BytesIO(img_data))
-            img_array = np.array(pil_img)
             
-            # 時系列グラフ（最初の画像）は分割せず、1枚の画像として保存
-            # 通常の画像はそのまま保存
+            # 高解像度画像として保存（DPI=400相当の解像度を維持）
             img_filename = f"{report_base_name}_p{len(pages)}.png"
             img_path = os.path.join(image_dir, img_filename)
             
-            pil_img.save(img_path)
+            # 高解像度で保存（元の解像度を維持）
+            pil_img.save(img_path, 'PNG', quality=95)
             
             # 相対パスで保存
             rel_path = os.path.relpath(img_path, image_dir) if os.path.isabs(img_path) else img_filename
@@ -321,16 +423,22 @@ def main():
         except Exception:
             meta_row = {}
         sess_title = f"{Path(lp).name}"
-        # 図表の生成（高解像度で生成：dpi=200）
-        ts_fig = figure_timeseries(frames, title=sess_title, dpi=200)
-        ts_b64 = b64_png(ts_fig, dpi=200)
+        # 図表の生成（高解像度で生成：dpi=400）
+        # 時系列グラフを3つの別々の画像として生成
+        concentration_fig = figure_concentration(frames, title=sess_title, dpi=400)
+        concentration_b64 = b64_png(concentration_fig, dpi=400)
+        ear_fig = figure_ear(frames, title=sess_title, dpi=400)
+        ear_b64 = b64_png(ear_fig, dpi=400)
+        gaze_fig = figure_gaze(frames, title=sess_title, dpi=400)
+        gaze_b64 = b64_png(gaze_fig, dpi=400)
+        
         hist_fig = figure_histograms(frames, title=sess_title)
-        hist_b64 = b64_png(hist_fig)
+        hist_b64 = b64_png(hist_fig, dpi=400)
         # 視線の2次元表示
-        imgs = [ts_b64, hist_b64]
+        imgs = [concentration_b64, ear_b64, gaze_b64, hist_b64]
         if 'gaze_y' in frames.columns:
-            scat = b64_png(figure_gaze_scatter(frames, title=sess_title))
-            heat = b64_png(figure_gaze_heatmap(frames, title=sess_title))
+            scat = b64_png(figure_gaze_scatter(frames, title=sess_title), dpi=400)
+            heat = b64_png(figure_gaze_heatmap(frames, title=sess_title), dpi=400)
             imgs.extend([scat, heat])
         # サマリ統計
         summ = summarize(frames)

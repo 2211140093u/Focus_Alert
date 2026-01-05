@@ -52,9 +52,9 @@ def main():
     args = parse_args()
 
     try:
-    cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
-                backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v,
-                zmq_url=args.zmq_url, zmq_topic=args.zmq_topic).open()
+        cam = Camera(index=args.cam, width=args.width, height=args.height, fps=30,
+                    backend=args.backend, rotate=args.rotate, flip_h=args.flip_h, flip_v=args.flip_v,
+                    zmq_url=args.zmq_url, zmq_topic=args.zmq_topic).open()
     except Exception as e:
         print(f"Error: Failed to open camera: {e}")
         print("Please check camera connection and permissions.")
@@ -108,6 +108,7 @@ def main():
     alert_enabled = (args.alert_mode == 'on')
     block_id = None
     distractor_on = False
+    is_recording = False  # 記録中フラグ
 
     # マウス/タッチ入力の取得
     last_click = {'x': None, 'y': None, 'ts': 0}
@@ -165,8 +166,8 @@ def main():
             frame_failure_count = 0  # 成功したらリセット
         t0 = time.time()
         try:
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        fm = face.process(rgb)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            fm = face.process(rgb)
         except Exception as e:
             print(f"Error processing frame: {e}")
             fm = None
@@ -207,9 +208,14 @@ def main():
             'consecutive_failures': cam_status_dict.get('consecutive_failures', 0),
         }
         
+        # 横長モードの判定（表示幅 > 表示高さ）
+        landscape_mode = (display_width > display_height)
+        
         vis = overlay.draw(frame, feats, score, alert, fps, status=status, 
-                          show_alert_text=alert_enabled, cam_status=cam_status)
-        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on})
+                          show_alert_text=alert_enabled, cam_status=cam_status,
+                          landscape_mode=landscape_mode, is_recording=is_recording, block_id=block_id)
+        btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on},
+                                        landscape_mode=landscape_mode, is_recording=is_recording)
 
         if logger:
             logger.write_frame(feats, score, alert, block_id=block_id)
@@ -275,13 +281,25 @@ def main():
             if logger:
                 logger.write_event('calibrate_center', block_id=block_id)
         if key == ord('s'):
-            # 新しいブロックを開始
-            block_id = 1 if block_id is None else (block_id + 1)
-            if logger:
-                logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+            # 「記録開始」ボタンが押されたとき
+            if not is_recording:
+                # カウントを初期化
+                blink.blinks = 0
+                blink.close_frames = 0
+                blink.long_close_frames = 0
+                blink.closed = False
+                # 新しいブロックを開始
+                block_id = 1 if block_id is None else (block_id + 1)
+                is_recording = True
+                if logger:
+                    logger.write_event('block_start', info=f'block={block_id}', block_id=block_id)
+                print(f"Recording started - Block {block_id}")
         if key == ord('e'):
-            if logger:
+            # 「記録終了」ボタンが押されたとき
+            if is_recording and logger:
                 logger.write_event('block_end', info=f'block={block_id}', block_id=block_id)
+                is_recording = False
+                print(f"Recording stopped - Block {block_id} ended")
         if key == ord('m'):
             if logger:
                 logger.write_event('marker', block_id=block_id)
