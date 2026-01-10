@@ -27,6 +27,7 @@ class CSVLogger:
                 'ts','row_type','session','participant','task','phase','block_id',
                 'ear','ear_base','ear_thr','blink_count','is_closed','long_close',
                 'gaze','gaze_thr','gaze_bias','gaze_y','gaze_y_thr','gaze_bias_y','gaze_offlvl',
+                'has_face','has_iris',
                 'risk','alert','event','info'
             ])
             # 必要に応じてメタ行を書き込む
@@ -39,10 +40,11 @@ class CSVLogger:
                 self.meta.get('session'), self.meta.get('participant'), self.meta.get('task'), self.meta.get('phase'), None,
                 None,None,None,None,None,None,
                 None,None,None,None,None,None,None,
+                None,None,
                 None,None,'meta', str(meta_with_time)
             ])
 
-    def write_frame(self, feats, score, alert, block_id=None):
+    def write_frame(self, feats, score, alert, block_id=None, has_face=None, has_iris=None):
         with open(self.path, 'a', newline='', encoding='utf-8') as f:
             w = csv.writer(f)
             b = feats.get('blink', {})
@@ -53,6 +55,7 @@ class CSVLogger:
                 b.get('ear'), b.get('ear_baseline'), b.get('ear_thresh'), b.get('blink_count'), b.get('is_closed'), b.get('long_close'),
                 g.get('gaze_horiz'), g.get('gaze_thresh'), g.get('gaze_bias'),
                 g.get('gaze_y'), g.get('gaze_y_thresh'), g.get('gaze_bias_y'), g.get('gaze_off_level'),
+                int(has_face) if has_face is not None else None, int(has_iris) if has_iris is not None else None,
                 score, int(alert), None, None
             ])
 
@@ -63,7 +66,8 @@ class CSVLogger:
                 time.time(),'event',
                 self.meta.get('session'), self.meta.get('participant'), self.meta.get('task'), self.meta.get('phase'), block_id,
                 None,None,None,None,None,None,
-                None,None,None,None,
+                None,None,None,None,None,None,None,
+                None,None,
                 None,None,event, info
             ])
     

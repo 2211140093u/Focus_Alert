@@ -22,13 +22,22 @@ def load_log(path: str):
     # 数値列を変換
     numeric_cols = ["ts", "ear", "ear_base", "ear_thr", "blink_count", "gaze", 
                     "gaze_thr", "gaze_bias", "gaze_y", "gaze_y_thr", "gaze_bias_y",
-                    "gaze_offlvl", "risk", "alert", "is_closed", "long_close", "block_id"]
+                    "gaze_offlvl", "risk", "alert", "is_closed", "long_close", "block_id",
+                    "has_face", "has_iris"]
     for col in numeric_cols:
         if col in frames.columns:
             frames[col] = pd.to_numeric(frames[col], errors="coerce")
     
     if "block_id" in frames:
         frames["block_id"] = frames["block_id"].fillna(-1).astype(int)
+    
+    # 顔検出に失敗したフレームを除外
+    if "has_face" in frames.columns:
+        original_count = len(frames)
+        frames = frames[frames["has_face"] == 1].copy()
+        excluded_count = original_count - len(frames)
+        if excluded_count > 0:
+            print(f"Note: Excluded {excluded_count} frames where face detection failed (out of {original_count} total frames)")
     
     return frames, events, meta_row
 

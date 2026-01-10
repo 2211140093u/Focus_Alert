@@ -183,7 +183,9 @@ def run_measurement(args, settings=None, rotate_display=False):
         btn_rects = overlay.draw_buttons(vis, states={'distract_on': distractor_on}, landscape_mode=landscape_mode, is_recording=is_recording)
         
         if logger:
-            logger.write_frame(feats, score, alert, block_id=block_id)
+            has_face = status.get('has_face', False)
+            has_iris = feats.get('gaze', {}).get('has_iris', False)
+            logger.write_frame(feats, score, alert, block_id=block_id, has_face=has_face, has_iris=has_iris)
         
         # フレームを表示解像度にリサイズ（横長モードではそのまま使用）
         h, w = vis.shape[:2]

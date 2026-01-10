@@ -201,7 +201,9 @@ def main():
                                         landscape_mode=landscape_mode, is_recording=is_recording)
 
         if logger:
-            logger.write_frame(feats, score, alert, block_id=block_id)
+            has_face = status.get('has_face', False)
+            has_iris = feats.get('gaze', {}).get('has_iris', False)
+            logger.write_frame(feats, score, alert, block_id=block_id, has_face=has_face, has_iris=has_iris)
 
         # フレームを表示解像度にリサイズ（アスペクト比を維持しつつフィット）
         h, w = vis.shape[:2]
